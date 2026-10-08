@@ -73,6 +73,15 @@ pub struct VideoGraphClip {
     pub crop_left: f64,
     /// Degrees clockwise; 0 means identity (the `rotate` stage is omitted).
     pub rotation: f64,
+    /// `transform.scale`; 1.0 means identity (the transform `scale` stage is omitted).
+    ///
+    /// Distinct from the fit-to-composition `scale` stage in the chain: that one letterboxes
+    /// the source into the composition, this one applies the user's transform on top.
+    pub scale: f64,
+    /// `transform.flipX`; emitted as `hflip` immediately before rotation.
+    pub flip_x: bool,
+    /// `transform.flipY`; emitted as `vflip` immediately before rotation.
+    pub flip_y: bool,
     /// 0..1; `>= 1` means identity (the `colorchannelmixer` stage is omitted).
     pub opacity: f64,
     /// `transform.x` / `transform.y` in project pixels, used by the `overlay`.
@@ -202,6 +211,39 @@ pub fn rotation_stage(clip: &VideoGraphClip) -> Option<String> {
     ))
 }
 
+/// `scale=iw*S:ih*S` — the clip's `transform.scale`, omitted at 1.0.
+///
+/// This is *not* the fit-to-composition scale in the chain. The preview
+/// (`PreviewCanvas.paintLayer`) applies `transform.scale` via `context.scale`, so leaving it
+/// out of the graph made a scaled clip render at full size in the export — a preview/export
+/// parity break (FR-04) that `packages/media/src/golden.test.ts` catches by sampling pixels.
+pub fn transform_scale_stage(clip: &VideoGraphClip) -> Option<String> {
+    if (clip.scale - 1.0).abs() < 1e-9 || !clip.scale.is_finite() || clip.scale <= 0.0 {
+        return None;
+    }
+    let factor = media::format_number(clip.scale, 6);
+    Some(format!("scale=iw*{factor}:ih*{factor}"))
+}
+
+/// `hflip` / `vflip` — the clip's mirror flags, omitted when neither is set.
+///
+/// Emitted immediately before rotation, matching the schema's "Mirror flags, applied before
+/// rotation" and the preview's `context.scale(±scale, ±scale)` before drawing.
+pub fn flip_stage(clip: &VideoGraphClip) -> Option<String> {
+    let mut stages: Vec<&str> = Vec::new();
+    if clip.flip_x {
+        stages.push("hflip");
+    }
+    if clip.flip_y {
+        stages.push("vflip");
+    }
+    if stages.is_empty() {
+        None
+    } else {
+        Some(stages.join(","))
+    }
+}
+
 /// `colorchannelmixer=aa=<opacity>`, omitted when the clip is fully opaque.
 pub fn opacity_stage(clip: &VideoGraphClip) -> Option<String> {
     if clip.opacity >= 1.0 {
@@ -307,6 +349,17 @@ pub fn build_filter_graph(
         ];
         if let Some(crop) = crop_stage(clip, width, height) {
             chain.push(crop);
+        }
+        // `transform.scale` and the mirror flags come after crop and before rotation. Reading
+        // the preview's canvas transforms from the image's point of view — translate, then
+        // rotate, then scale(±scale) about the origin — the source is cropped, resized,
+        // mirrored and only then rotated. Omitting either stage silently disagreed with the
+        // preview, so this must stay in step with `packages/media/src/graph.ts`.
+        if let Some(transform_scale) = transform_scale_stage(clip) {
+            chain.push(transform_scale);
+        }
+        if let Some(flip) = flip_stage(clip) {
+            chain.push(flip);
         }
         if let Some(rotation) = rotation_stage(clip) {
             chain.push(rotation);
@@ -957,6 +1010,9 @@ mod tests {
             crop_bottom: 0.0,
             crop_left: 0.0,
             rotation: 0.0,
+            scale: 1.0,
+            flip_x: false,
+            flip_y: false,
             opacity: 1.0,
             position_x: 0.0,
             position_y: 0.0,
@@ -1121,6 +1177,109 @@ mod tests {
         assert_eq!(
             rotation_stage(&rotated).as_deref(),
             Some("rotate=3.141593:ow=rotw(3.141593):oh=roth(3.141593):c=none")
+        );
+    }
+
+    /// `transform.scale` is a *distinct* stage from the fit-to-composition scale, and getting
+    /// this wrong is what made the preview and the export disagree (FR-04).
+    #[test]
+    fn transform_scale_stage_is_omitted_at_one_and_emitted_otherwise() {
+        assert!(transform_scale_stage(&plain_video_clip(0, 0)).is_none());
+
+        let half = VideoGraphClip {
+            scale: 0.5,
+            ..plain_video_clip(0, 0)
+        };
+        assert_eq!(
+            transform_scale_stage(&half).as_deref(),
+            Some("scale=iw*0.5:ih*0.5")
+        );
+
+        let enlarged = VideoGraphClip {
+            scale: 1.25,
+            ..plain_video_clip(0, 0)
+        };
+        assert_eq!(
+            transform_scale_stage(&enlarged).as_deref(),
+            Some("scale=iw*1.25:ih*1.25")
+        );
+
+        // A degenerate scale must never emit `scale=iw*0:ih*0`, which FFmpeg rejects.
+        let degenerate = VideoGraphClip {
+            scale: 0.0,
+            ..plain_video_clip(0, 0)
+        };
+        assert!(transform_scale_stage(&degenerate).is_none());
+    }
+
+    #[test]
+    fn flip_stage_is_omitted_when_not_mirrored_and_orders_hflip_before_vflip() {
+        assert!(flip_stage(&plain_video_clip(0, 0)).is_none());
+
+        let mirrored_x = VideoGraphClip {
+            flip_x: true,
+            ..plain_video_clip(0, 0)
+        };
+        assert_eq!(flip_stage(&mirrored_x).as_deref(), Some("hflip"));
+
+        let mirrored_y = VideoGraphClip {
+            flip_y: true,
+            ..plain_video_clip(0, 0)
+        };
+        assert_eq!(flip_stage(&mirrored_y).as_deref(), Some("vflip"));
+
+        let both = VideoGraphClip {
+            flip_x: true,
+            flip_y: true,
+            ..plain_video_clip(0, 0)
+        };
+        assert_eq!(flip_stage(&both).as_deref(), Some("hflip,vflip"));
+    }
+
+    /// The two implementations of the composition spec must agree on stage order:
+    /// fit-to-composition, pad, crop, transform scale, mirror, rotate, format, alpha.
+    /// `packages/media/src/graph.test.ts` asserts the same order for the same clip, so the
+    /// two renderers cannot drift apart silently.
+    #[test]
+    fn stage_order_matches_the_typescript_graph_builder() {
+        let clip = VideoGraphClip {
+            scale: 2.0,
+            flip_x: true,
+            rotation: 90.0,
+            crop_top: 0.1,
+            ..plain_video_clip(0, 0)
+        };
+        let graph = build_filter_graph(&config(), &[clip], &[]).unwrap();
+
+        // The first stage is the black base; the second is this clip's chain.
+        let chain = graph.complex.split(';').nth(1).expect("a clip chain");
+        let stages = ["crop=", "scale=iw*2:ih*2", "hflip", "rotate="];
+        let positions: Vec<usize> = stages
+            .iter()
+            .map(|needle| {
+                chain
+                    .find(needle)
+                    .unwrap_or_else(|| panic!("missing {needle} in {chain}"))
+            })
+            .collect();
+
+        assert!(
+            positions.windows(2).all(|pair| pair[0] < pair[1]),
+            "stages are out of order in {chain}: {positions:?}"
+        );
+        // The fit-to-composition scale must precede the transform scale, and both must exist:
+        // conflating them was the original defect.
+        let fit = chain
+            .find("force_original_aspect_ratio=decrease")
+            .expect("fit scale");
+        assert!(
+            fit < positions[1],
+            "the transform scale must follow the fit scale"
+        );
+        assert_eq!(
+            chain.matches("scale=").count(),
+            2,
+            "expected exactly two scale stages (fit + transform) in {chain}"
         );
     }
 

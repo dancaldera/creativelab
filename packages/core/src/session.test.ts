@@ -514,6 +514,99 @@ describe("reopening a project (FR-01, PRD §11)", () => {
     );
     await store.close();
   });
+
+  /**
+   * PRD §2 states the release target exactly: "100 consecutive create/save/reopen tests
+   * without broken references". The previous case runs a representative handful; this one
+   * runs the number the spec names, because reliability regressions tend to appear in the
+   * tail of a loop (a file handle that is never released, a WAL file that grows, a counter
+   * that drifts) rather than in the third iteration.
+   *
+   * It also alternates the direction of the edit — add, then remove — so the project is not
+   * monotonically growing, and asserts the *reopened* state rather than the in-memory one:
+   * "without broken references" is a statement about what survives a round trip to disk.
+   */
+  it("survives 100 consecutive create/save/reopen cycles with no broken references", async () => {
+    const workspace = await openWorkspace(join(root, "soak"));
+    const TOTAL = 100;
+
+    for (let cycle = 0; cycle < TOTAL; cycle += 1) {
+      const store = new SqliteProjectStore({ filename: workspace.layout.databasePath, migrations });
+      const exists = await pathExists(workspace.layout.manifestPath);
+      const session = exists
+        ? await ProjectSession.open({ workspace, store, migrations, snapshotIntervalMs: 0 })
+        : await ProjectSession.create(
+            { workspace, store, migrations, snapshotIntervalMs: 0 },
+            {
+              title: "Soak",
+              fps: { num: 30000, den: 1001 },
+              width: 1920,
+              height: 1080,
+              createdAt: "2026-06-01T12:00:00.000Z",
+            },
+          );
+
+      // Add on even cycles, remove the oldest on odd ones, so the count oscillates 1 -> 0
+      // rather than growing: the assertions are then about durability across a full
+      // open/save/close/reopen loop, not about how many clips fit in memory.
+      if (cycle % 2 === 0) {
+        const clip = addClip(session.document, cycle * 10, 10);
+        session.applyEdit(`cycle ${cycle} add`, (document) => ({
+          ...document,
+          clips: [...document.clips, clip],
+        }));
+      } else {
+        const oldest = [...session.document.clips].sort((a, b) => a.startFrame - b.startFrame)[0];
+        if (oldest) {
+          session.applyEdit(`cycle ${cycle} remove`, (document) => ({
+            ...document,
+            clips: document.clips.filter((candidate) => candidate.id !== oldest.id),
+          }));
+        }
+      }
+      await session.flushAutosave();
+
+      // Even cycles add one clip to an empty timeline; odd cycles remove it again.
+      const expectedClips = cycle % 2 === 0 ? 1 : 0;
+
+      // The invariant that matters: reopen from disk and compare.
+      await session.close();
+      const verifier = new SqliteProjectStore({
+        filename: workspace.layout.databasePath,
+        migrations,
+      });
+      await verifier.init();
+      const reopened = await verifier.loadDocument();
+      expect(reopened.clips, `cycle ${cycle}: clip count after reopening`).toHaveLength(
+        expectedClips,
+      );
+      expect(reopened.project.fps).toEqual({ num: 30000, den: 1001 });
+      // "No broken references": every clip still resolves to a track in the reloaded
+      // document, and the sequence it names still exists.
+      for (const clip of reopened.clips) {
+        expect(reopened.tracks.some((track) => track.id === clip.trackId)).toBe(true);
+        expect(reopened.sequences.some((sequence) => sequence.id === clip.sequenceId)).toBe(true);
+      }
+      expect(verifier.driver.integrityCheck()).toBe("ok");
+      await verifier.close();
+    }
+
+    // A manifest must exist at the end and still describe the project.
+    expect(await pathExists(workspace.layout.manifestPath)).toBe(true);
+    const manifest = parseManifest(await readFile(workspace.layout.manifestPath, "utf8"));
+    expect(manifest.project.title).toBe("Soak");
+    // 100 cycles, the last of which (99, odd) removed the clip: the manifest must agree
+    // with the database rather than describing a stale timeline.
+    expect(manifest.clips).toHaveLength(0);
+
+    // And the database must not have leaked sidecar files from 100 open/close cycles.
+    const sidecars = (await readdir(workspace.layout.root)).filter((name) =>
+      name.startsWith("project.db-"),
+    );
+    // WAL and SHM files are expected while a connection is open; none may survive after
+    // the last close, which is what a leaked handle would leave behind.
+    expect(sidecars, `unexpected sidecar files: ${sidecars.join(", ")}`).toEqual([]);
+  }, 120_000);
 });
 
 describe("media integrity (FR-02: detect missing paths, relink)", () => {

@@ -254,6 +254,21 @@ export function Inspector() {
         </Section>
 
         <Section title="Transitions">
+          {/*
+            PRD §8: "Unknown features must be hidden/disabled rather than silently ignored."
+
+            `packages/media/src/graph.ts` composites clips with `overlay ... enable=...` and
+            never reads `clip.properties.transitionIn/Out`. A crossfade additionally needs
+            overlapping source frames, which the compositor does not arrange yet. So every
+            transition kind is inert today, and offering the picker without saying so would
+            let a user set a crossfade that quietly does nothing.
+          */}
+          <p className="callout callout--warning" role="note">
+            <strong>Transitions are not applied by the renderer yet.</strong> They are stored in the
+            project and shown here so the setting is not lost, but the preview and the export graph
+            ignore them entirely today (FR-12 / Phase 3, tracked as an issue). Choosing one changes
+            nothing on screen or in the exported file.
+          </p>
           {(["transitionIn", "transitionOut"] as const).map((key) => (
             <div className="row" key={key}>
               <label className="small muted" htmlFor={`${key}-${clip.id}`}>
@@ -268,8 +283,8 @@ export function Inspector() {
                 }
               >
                 {TRANSITION_KINDS.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {kind}
+                  <option key={kind} value={kind} disabled={!RENDERED_TRANSITION_KINDS.has(kind)}>
+                    {RENDERED_TRANSITION_KINDS.has(kind) ? kind : `${kind} (not applied yet)`}
                   </option>
                 ))}
               </select>
@@ -278,6 +293,7 @@ export function Inspector() {
                 min={0}
                 max={Math.max(1, clip.durationFrames)}
                 value={clip.properties[key].durationFrames}
+                disabled={!RENDERED_TRANSITION_KINDS.has(clip.properties[key].kind)}
                 aria-label={`${key === "transitionIn" ? "In" : "Out"} transition duration in frames`}
                 onChange={(event) =>
                   update(
@@ -424,6 +440,19 @@ export function Inspector() {
     </aside>
   );
 }
+
+/**
+ * Transition kinds the export graph actually renders.
+ *
+ * Empty on purpose, and deliberately declared next to the picker rather than inferred:
+ * `packages/media/src/graph.ts` starts the composition from a black base and composites each
+ * clip with `overlay ... enable=...`, which never reads `transitionIn`/`transitionOut`. A
+ * crossfade would also need the compositor to overlap neighbouring clips, which it does not.
+ *
+ * When a kind lands in the graph, add it here and it becomes selectable — the UI reads this
+ * set rather than a hard-coded list, so the two cannot drift apart silently.
+ */
+const RENDERED_TRANSITION_KINDS: ReadonlySet<string> = new Set<string>();
 
 const TRANSITION_KINDS = [
   "none",

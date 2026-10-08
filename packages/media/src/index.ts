@@ -95,9 +95,11 @@ export {
   buildAtempoChain,
   buildFilterGraph,
   cropStage,
+  flipStage,
   formatFilterNumber,
   opacityStage,
   rotationStage,
+  transformScaleStage,
 } from "./graph.js";
 export type {
   AssetResolver,

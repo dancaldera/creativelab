@@ -15,7 +15,14 @@ import {
 } from "@creativelab/core";
 import type { Clip, EditorDocument, ExportPreset } from "@creativelab/core";
 import { MediaError } from "./errors.js";
-import { buildAtempoChain, buildFilterGraph, cropStage, formatFilterNumber } from "./graph.js";
+import {
+  buildAtempoChain,
+  buildFilterGraph,
+  cropStage,
+  flipStage,
+  formatFilterNumber,
+  transformScaleStage,
+} from "./graph.js";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 /** 29.97 — the case where naive float seconds would drift. */
@@ -140,9 +147,15 @@ describe("buildFilterGraph", () => {
   it("describes video clips in track sort order with exact stage strings", () => {
     const stages = graph.filterComplex.split(";");
     // V1 has sortOrder 0, V2 has sortOrder 1: the lower track composites first.
+    // This clip carries `transform.scale = 1.25`, `rotation = 90` and `opacity = 0.5`, so the
+    // full stage order is pinned here: fit-to-composition, pad, crop, **transform scale**,
+    // **mirror**, rotate, format, alpha. The scale and flip stages are listed because the
+    // preview has always applied them and the exporter did not — a FR-04 parity break that
+    // golden.test.ts caught by sampling pixels.
     expect(stages[1]).toBe(
       "[0:v]trim=start=1.001:duration=10.01,setpts=(PTS-STARTPTS)/1," +
         "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2," +
+        "scale=iw*1.25:ih*1.25," +
         "rotate=1.570796:ow=rotw(1.570796):oh=roth(1.570796):c=none,format=rgba," +
         "colorchannelmixer=aa=0.5[v0]",
     );
@@ -386,5 +399,92 @@ describe("numeric helpers", () => {
   it("omits crop and rotation when they are identity", () => {
     expect(cropStage(clipB, 1920, 1080)).toBe("crop=1728:972:96:108");
     expect(cropStage(clipA, 1920, 1080)).toBeUndefined();
+  });
+});
+
+describe("transform.scale and mirror flags reach the graph", () => {
+  const base = (overrides: Record<string, unknown> = {}) =>
+    ClipSchema.parse({
+      id: "clp_stage0000000000000001",
+      trackId: "trk_stage0000000000000001",
+      sequenceId: "seq_stage0000000000000001",
+      startFrame: 0,
+      durationFrames: 25,
+      properties: overrides,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+  it("omits the transform scale at 1 and emits it otherwise", () => {
+    expect(transformScaleStage(base())).toBeUndefined();
+    expect(transformScaleStage(base({ transform: { scale: 1 } }))).toBeUndefined();
+    expect(transformScaleStage(base({ transform: { scale: 0.5 } }))).toBe("scale=iw*0.5:ih*0.5");
+    expect(transformScaleStage(base({ transform: { scale: 1.25 } }))).toBe("scale=iw*1.25:ih*1.25");
+    // A degenerate scale must not emit `scale=iw*0:ih*0`, which FFmpeg rejects outright. The
+    // schema already forbids it (`min(0.01)`), so this exercises the guard against input that
+    // bypassed validation — a hand-edited project.json, for example.
+    const degenerate = { properties: { transform: { scale: 0, flipX: false, flipY: false } } };
+    expect(transformScaleStage(degenerate as unknown as Clip)).toBeUndefined();
+    const notANumber = { properties: { transform: { scale: Number.NaN } } };
+    expect(transformScaleStage(notANumber as unknown as Clip)).toBeUndefined();
+  });
+
+  it("omits mirroring when neither flag is set, and orders hflip before vflip", () => {
+    expect(flipStage(base())).toBeUndefined();
+    expect(flipStage(base({ transform: { flipX: true } }))).toBe("hflip");
+    expect(flipStage(base({ transform: { flipY: true } }))).toBe("vflip");
+    expect(flipStage(base({ transform: { flipX: true, flipY: true } }))).toBe("hflip,vflip");
+  });
+
+  it("places scale and mirror after crop and before rotation", () => {
+    const document = createInitialDocument(
+      ProjectSchema.parse({
+        id: "prj_stage00000000000000001",
+        schemaVersion: 1,
+        title: "Stage order",
+        fps: { num: 25, den: 1 },
+        width: 320,
+        height: 180,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    const track = document.tracks.find((candidate) => candidate.kind === "video")!;
+    const clip = ClipSchema.parse({
+      ...base({
+        transform: { scale: 2, flipX: true, rotation: 90 },
+        crop: { top: 0.1, right: 0, bottom: 0, left: 0 },
+      }),
+      assetId: "ast_stage00000000000000001",
+      trackId: track.id,
+      sequenceId: track.sequenceId,
+    });
+    const assets = new Map([
+      [
+        "ast_stage00000000000000001",
+        { path: "/tmp/stage.mp4", durationFrames: 100, hasAudio: false },
+      ],
+    ]);
+    const graph = buildFilterGraph(
+      { ...document, clips: [clip] },
+      {
+        preset: ExportPresetSchema.parse({
+          id: "p",
+          label: "p",
+          width: 320,
+          height: 180,
+          videoBitrateKbps: 1_000,
+        }),
+        assets,
+      },
+    );
+
+    const chain = graph.filterComplex.split(";")[1]!;
+    const order = ["crop=", "scale=iw*2:ih*2", "hflip", "rotate="].map((needle) =>
+      chain.indexOf(needle),
+    );
+    expect(order, `missing a stage in: ${chain}`).not.toContain(-1);
+    // Crop, then the transform scale, then mirroring, then rotation — the preview's order.
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 });

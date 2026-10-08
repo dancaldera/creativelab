@@ -312,6 +312,9 @@ fn build_render_plan(
             crop_bottom: crop.bottom,
             crop_left: crop.left,
             rotation: transform.rotation,
+            scale: transform.scale,
+            flip_x: transform.flip_x,
+            flip_y: transform.flip_y,
             opacity: transform.opacity,
             position_x: transform.x,
             position_y: transform.y,
@@ -431,6 +434,9 @@ struct TransformValues {
     y: f64,
     rotation: f64,
     opacity: f64,
+    scale: f64,
+    flip_x: bool,
+    flip_y: bool,
 }
 
 impl Default for TransformValues {
@@ -439,6 +445,12 @@ impl Default for TransformValues {
             x: 0.0,
             y: 0.0,
             rotation: 0.0,
+            // Identity for the transform, matching `ClipProperties`' schema defaults: scale
+            // 1 and no mirroring, so a clip with a partial `transform` object renders
+            // unchanged rather than collapsing to zero size.
+            scale: 1.0,
+            flip_x: false,
+            flip_y: false,
             opacity: 1.0,
         }
     }
@@ -503,6 +515,11 @@ fn transform_properties(properties: &serde_json::Value) -> TransformValues {
         x: read_f64(&transform, "x", 0.0),
         y: read_f64(&transform, "y", 0.0),
         rotation: read_f64(&transform, "rotation", 0.0),
+        // Clamped exactly as the schema does, so a hand-edited manifest cannot produce
+        // `scale=iw*0:ih*0`, which FFmpeg rejects outright.
+        scale: read_f64(&transform, "scale", 1.0).clamp(0.01, 20.0),
+        flip_x: read_bool(&transform, "flipX", false),
+        flip_y: read_bool(&transform, "flipY", false),
         opacity: read_f64(&transform, "opacity", 1.0).clamp(0.0, 1.0),
     }
 }

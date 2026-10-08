@@ -188,19 +188,28 @@ Per audio clip: `atrim` → `asetpts=PTS-STARTPTS` → chained `atempo` → `ade
 
 Rules that both sides must honour:
 
-| Rule                                                                               | Why                                                                                  |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Stage order is frozen                                                              | A different order changes the pixels                                                 |
-| **Identity stages are omitted**                                                    | A graph of no-ops is unreadable and hides real changes in review                     |
-| `rotation` is **degrees clockwise**; emit positive radians                         | The `rotate` filter is clockwise for positive radians, and the schema says clockwise |
-| `rotw(a)`/`roth(a)` take an **angle**, not a size                                  | `rotw(iw)` silently computes a nonsense bounding box                                 |
-| Numbers use `toFixed(6)` with trailing zeros stripped, `-0` → `0`                  | So the two implementations stay diffable                                             |
-| Crop is clamped to ≥1 px                                                           | `crop=0` is invalid and would fail the render                                        |
-| Track `hidden` skips video, `muted`/disabled audio is skipped, `solo` mutes others | Otherwise the export shows something the preview does not                            |
+| Rule                                                                               | Why                                                                                                                  |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Stage order is frozen                                                              | A different order changes the pixels                                                                                 |
+| **Identity stages are omitted**                                                    | A graph of no-ops is unreadable and hides real changes in review                                                     |
+| `rotation` is **degrees clockwise**; emit positive radians                         | The `rotate` filter is clockwise for positive radians, and the schema says clockwise                                 |
+| `transform.scale` and the mirror flags are **rendered**, not just stored           | They are previewed, so omitting them is a parity break; `golden.test.ts` measures the covered pixel area to catch it |
+| `rotw(a)`/`roth(a)` take an **angle**, not a size                                  | `rotw(iw)` silently computes a nonsense bounding box                                                                 |
+| Numbers use `toFixed(6)` with trailing zeros stripped, `-0` → `0`                  | So the two implementations stay diffable                                                                             |
+| Crop is clamped to ≥1 px                                                           | `crop=0` is invalid and would fail the render                                                                        |
+| Track `hidden` skips video, `muted`/disabled audio is skipped, `solo` mutes others | Otherwise the export shows something the preview does not                                                            |
 
-**Known gap:** the graph does not yet read `document.effects` or `document.keyframes`, so
-clip effects and keyframes are stored and listed but inert. The Inspector discloses this
-rather than silently accepting them; FR-12 tracks the work.
+**Known gaps**, all disclosed in the Inspector rather than silently accepted (PRD §8):
+
+- The graph does not read `document.effects` or `document.keyframes`, so clip effects and
+  keyframes are stored and listed but inert. `Add effect…` is disabled.
+- It does not read `transitionIn`/`transitionOut` either, so **every** transition kind is
+  inert. A crossfade additionally needs the compositor to overlap neighbouring clips, which
+  it does not do. `RENDERED_TRANSITION_KINDS` in `Inspector.tsx` is the single set that gates
+  the picker, and it is currently empty.
+- Titles and text are not rendered.
+
+FR-12 tracks all three, and `golden.test.ts` states which cases it therefore does not cover.
 
 ## `@creativelab/providers` — required surface
 

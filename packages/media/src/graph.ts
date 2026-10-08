@@ -157,6 +157,38 @@ export function rotationStage(clip: Clip): string | undefined {
   return `rotate=${radians}:ow=rotw(${radians}):oh=roth(${radians}):c=none`;
 }
 
+/**
+ * `scale=iw*S:ih*S` — the clip's `transform.scale`, omitted at 1.
+ *
+ * This is *not* the fit-to-composition scale above: that one letterboxes the source into the
+ * composition, this one then resizes the result by the user's transform. The preview
+ * (`PreviewCanvas.paintLayer`) applies it via `context.scale`, so leaving it out of the graph
+ * made a scaled clip render at full size in the export — a preview/export parity break
+ * (FR-04), which `golden.test.ts` catches by sampling pixels.
+ */
+export function transformScaleStage(clip: Clip): string | undefined {
+  const { scale } = clip.properties.transform;
+  if (scale === 1) return undefined;
+  if (!Number.isFinite(scale) || scale <= 0) return undefined;
+  const factor = formatFilterNumber(scale);
+  return `scale=iw*${factor}:ih*${factor}`;
+}
+
+/**
+ * `hflip` / `vflip` — the clip's mirror flags, omitted when neither is set.
+ *
+ * Emitted immediately before rotation, matching both the schema's "Mirror flags, applied
+ * before rotation" and the preview's `context.scale(±scale, ±scale)` before drawing.
+ */
+export function flipStage(clip: Clip): string | undefined {
+  const { flipX, flipY } = clip.properties.transform;
+  if (!flipX && !flipY) return undefined;
+  const stages: string[] = [];
+  if (flipX) stages.push("hflip");
+  if (flipY) stages.push("vflip");
+  return stages.join(",");
+}
+
 /** `colorchannelmixer=aa=<opacity>`, omitted when the clip is fully opaque. */
 export function opacityStage(clip: Clip): string | undefined {
   const { opacity } = clip.properties.transform;
@@ -323,6 +355,14 @@ export function buildFilterGraph(
     ];
     const crop = cropStage(clip, width, height);
     if (crop) chain.push(crop);
+    // `transform.scale` and the mirror flags come after crop and before rotation. Reading
+    // the preview's canvas transforms from the image's point of view — translate, then
+    // rotate, then scale(±scale) about the origin — the source is cropped, resized, mirrored
+    // and only then rotated. Omitting either stage here silently disagreed with the preview.
+    const transformScale = transformScaleStage(clip);
+    if (transformScale) chain.push(transformScale);
+    const flip = flipStage(clip);
+    if (flip) chain.push(flip);
     const rotation = rotationStage(clip);
     if (rotation) chain.push(rotation);
     chain.push("format=rgba");
