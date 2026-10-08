@@ -43,9 +43,11 @@ apps/desktop/src-tauri                       Rust host: allowlisted IPC · OS ke
 tools/cli                                    headless end-to-end driver
 ```
 
-Full detail, including the frozen module contracts and the IPC allowlist, is in
-[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). The reasoning behind the load-bearing
-decisions is in [`docs/adr/`](./docs/adr/).
+Full detail, including the frozen module contracts, the composition spec and the IPC
+allowlist, is in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). The reasoning behind the
+load-bearing decisions is in [`docs/adr/`](./docs/adr/), the requirement-to-code mapping is in
+[`docs/TRACEABILITY.md`](./docs/TRACEABILITY.md), and the security guarantees are in
+[`docs/SECURITY.md`](./docs/SECURITY.md).
 
 ### Design invariants
 
@@ -126,8 +128,11 @@ for relinking, so a packaged project opens cleanly on a machine that has never s
 - Remote processing is disclosed before upload: the UI names the exact files leaving the
   device and the destination provider.
 
-See [PRD §13](./docs/PRD.md) and the [`.env.example`](./.env.example) header, which explains
-why provider keys deliberately cannot be configured through a `.env` file.
+Each guarantee above maps to specific code and a specific test in
+[`docs/SECURITY.md`](./docs/SECURITY.md), which also states the limitations plainly —
+including that no third-party audit has been performed. See [PRD §13](./docs/PRD.md) and the
+[`.env.example`](./.env.example) header, which explains why provider keys deliberately cannot
+be configured through a `.env` file.
 
 ## Cost controls (BYOK)
 
