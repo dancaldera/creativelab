@@ -186,11 +186,14 @@ fn map_model_entry(
     item: &serde_json::Value,
     fetched_at: &str,
 ) -> Option<ProviderModelDto> {
+    // Order matters: `model_id` (ElevenLabs) and `id` (Vercel) are identifiers, while
+    // `name` is a display label. Cloudflare publishes only `name`, which doubles as the
+    // callable id (`@cf/black-forest-labs/flux-1-schnell`), so it stays as the last resort.
     let model_id = item
         .get("id")
-        .or_else(|| item.get("name"))
-        .or_else(|| item.get("model"))
         .or_else(|| item.get("model_id"))
+        .or_else(|| item.get("model"))
+        .or_else(|| item.get("name"))
         .and_then(|value| value.as_str())?;
     let display_name = item
         .get("name")

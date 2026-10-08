@@ -10,6 +10,7 @@
 //! the provider id only, and [`CommandError::sanitize`] strips anything that looks like a
 //! bearer token or API key from a provider-supplied message before it is serialized.
 
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::security::PathError;
@@ -205,73 +206,44 @@ impl From<reqwest::Error> for CommandError {
 ///
 /// This is defence in depth, not the primary control: no call site ever *intends* to
 /// interpolate a secret. But provider error bodies are echoed into `message`, and a
-/// misconfigured provider can echo the key back, so common token shapes are redacted.
+/// misconfigured provider can echo the key back, so three patterns are redacted:
+///
+///  1. named headers and key/value pairs — `Authorization: Bearer x`,
+///     `x-api-key: x`, `api_key=x`, `cookie=…`, `token=…`, `secret=…`, `password=…` —
+///     keeping the label so the message still reads;
+///  2. bare provider key literals anywhere in free text (`sk-…`, `xi-…`, `rk-…`, `pk-…`);
+///  3. a lone `Bearer <token>` with no header name in front of it.
+///
+/// Redaction is the *safe direction*: a false positive costs readability, a false negative
+/// leaks a live key into a renderer-visible error, a log and a crash report.
 pub fn sanitize(message: &str) -> String {
-    let mut out = String::with_capacity(message.len());
-    for token in message.split_inclusive(char::is_whitespace) {
-        let core = token.trim_end();
-        let tail = &token[core.len()..];
-        match redact_token(core) {
-            Some(redacted) => out.push_str(&redacted),
-            None => out.push_str(core),
-        }
-        out.push_str(tail);
-    }
-    out
+    let (named, literals, bearer) = redaction_patterns();
+    let named_redacted = named.replace_all(message, "${1}: [redacted]");
+    let bearer_redacted = bearer.replace_all(&named_redacted, "Bearer [redacted]");
+    literals
+        .replace_all(&bearer_redacted, "[redacted]")
+        .into_owned()
 }
 
-/// Shapes that mean "the rest of this token is secret".
-const SECRET_MARKERS: &[&str] = &[
-    "sk-",
-    "sk_",
-    "bearer",
-    "api_key",
-    "api-key",
-    "apikey",
-    "x-api-key",
-    "authorization",
-    "token=",
-    "token:",
-    "secret=",
-    "secret:",
-    "password=",
-    "password:",
-];
-
-/// Redact one whitespace-delimited token, or `None` when it carries no secret marker.
-///
-/// The label is kept (`Authorization` -> `Authorization[redacted]`, `api_key=…` ->
-/// `api_key[redacted]`) so the message still reads; the value never survives.
-fn redact_token(token: &str) -> Option<String> {
-    if token.is_empty() {
-        return None;
-    }
-    let lower = token.to_ascii_lowercase();
-    if !SECRET_MARKERS.iter().any(|marker| lower.contains(marker)) {
-        return None;
-    }
-    // `Scheme: value` / `key=value`: keep the label, drop everything after the separator.
-    if let Some(index) = token.find([':', '=']) {
-        let label: String = token[..index]
-            .chars()
-            .filter(|character| {
-                character.is_alphanumeric() || *character == '-' || *character == '_'
-            })
-            .collect();
-        if !label.is_empty() {
-            return Some(format!("{label}[redacted]"));
-        }
-    }
-    // A bare scheme word (e.g. `Bearer`) reads better with its name kept.
-    if token.len() <= 16
-        && token
-            .chars()
-            .all(|character| character.is_ascii_alphabetic())
-    {
-        return Some(format!("{token}[redacted]"));
-    }
-    // Otherwise the marker *is* part of the secret (`sk-live-abc123`): drop it entirely.
-    Some("[redacted]".to_string())
+/// The three redaction patterns, compiled once.
+fn redaction_patterns() -> &'static (Regex, Regex, Regex) {
+    static PATTERNS: std::sync::OnceLock<(Regex, Regex, Regex)> = std::sync::OnceLock::new();
+    PATTERNS.get_or_init(|| {
+        (
+            // 1. `Name: value` / `name=value` for header- and key-shaped names. The value is
+            //    a single non-whitespace run, optionally preceded by a `Bearer` scheme word,
+            //    so `Authorization: Bearer sk-…` is redacted in one match.
+            Regex::new(
+                r"(?i)\b(authorization|x-api-key|xi-api-key|api[-_]?key|cookie|token|secret|password|passwd|bearer)\b[ \t]*[:=]?[ \t]*(?:Bearer[ \t]+)?\S+",
+            )
+            .expect("static redaction regex"),
+            // 2. A bare provider key literal anywhere in free text, even with no label.
+            Regex::new(r"\b(?:sk|xi|rk|pk)-[A-Za-z0-9_-]{8,}\b")
+                .expect("static redaction regex"),
+            // 3. A lone `Bearer <token>` with no header name in front of it.
+            Regex::new(r"(?i)\bBearer[ \t]+\S+").expect("static redaction regex"),
+        )
+    })
 }
 
 #[cfg(test)]
@@ -311,10 +283,68 @@ mod tests {
         let text =
             "request failed: Authorization: Bearer sk-live-abc123 rejected (api_key=topsecret)";
         let cleaned = sanitize(text);
+        // The negative assertions are the ones that matter: a redaction test that only looks
+        // for `[redacted]` can pass while the secret sits right next to it.
         assert!(!cleaned.contains("sk-live-abc123"), "{cleaned}");
         assert!(!cleaned.contains("topsecret"), "{cleaned}");
-        assert!(cleaned.contains("Authorization[redacted]"));
-        assert!(cleaned.contains("api_key[redacted]") || cleaned.contains("api_key[redacted]"));
+        assert!(cleaned.contains("[redacted]"), "{cleaned}");
+        // The labels survive so the message is still diagnosable.
+        assert!(cleaned.contains("Authorization: [redacted]"), "{cleaned}");
+        assert!(cleaned.contains("api_key: [redacted]"), "{cleaned}");
+        assert!(!cleaned.contains("Bearer sk-live"), "{cleaned}");
+    }
+
+    /// A key echoed as free text, with no header name anywhere near it.
+    #[test]
+    fn redacts_bare_key_literals_in_free_text() {
+        for secret in [
+            "sk-live-abc123456",
+            "sk-proj_ABCdef1234567890",
+            "xi-abcdefgh12345678",
+            "rk-0123456789abcdef",
+            "pk-live_0123456789",
+        ] {
+            let cleaned = sanitize(&format!("upstream said: {secret} is invalid"));
+            assert!(!cleaned.contains(secret), "{cleaned}");
+            assert!(cleaned.contains("[redacted]"), "{cleaned}");
+        }
+        // A short or unrelated token is left alone: this is a heuristic, not a filter that
+        // mangles every message.
+        assert_eq!(
+            sanitize("clip clp_1 references unknown track"),
+            "clip clp_1 references unknown track"
+        );
+        assert_eq!(sanitize("sk-abc"), "sk-abc", "too short to be a key");
+    }
+
+    #[test]
+    fn redacts_every_credential_header_and_key_name() {
+        for (input, secret) in [
+            ("x-api-key: abcdefghijklmnop", "abcdefghijklmnop"),
+            ("xi-api-key=abcdefghijklmnop", "abcdefghijklmnop"),
+            ("api-key: abcdefghijklmnop", "abcdefghijklmnop"),
+            ("apikey=abcdefghijklmnop", "abcdefghijklmnop"),
+            ("cookie: session=abcdefghijklmnop", "abcdefghijklmnop"),
+            ("token: abcdefghijklmnop", "abcdefghijklmnop"),
+            ("secret=abcdefghijklmnop", "abcdefghijklmnop"),
+            ("password: hunter2hunter2", "hunter2hunter2"),
+            ("passwd=hunter2hunter2", "hunter2hunter2"),
+            ("Bearer abcdefghijklmnop", "abcdefghijklmnop"),
+            ("AUTHORIZATION: bearer TOKENVALUE12345", "TOKENVALUE12345"),
+        ] {
+            let cleaned = sanitize(input);
+            assert!(!cleaned.contains(secret), "{input} -> {cleaned}");
+            assert!(cleaned.contains("[redacted]"), "{input} -> {cleaned}");
+        }
+    }
+
+    #[test]
+    fn redaction_is_idempotent_and_leaves_clean_messages_untouched() {
+        let already = sanitize("upstream returned HTTP 500");
+        assert_eq!(already, "upstream returned HTTP 500");
+        assert_eq!(sanitize(&already), already);
+        let once = sanitize("Authorization: Bearer sk-live-abc123456");
+        assert_eq!(sanitize(&once), once, "redacting twice must be stable");
     }
 
     #[test]

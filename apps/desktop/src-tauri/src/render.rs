@@ -1169,19 +1169,23 @@ mod tests {
             ],
         )
         .unwrap();
+        // `compareClips` orders by start frame, so the clip at frame 15 becomes `[a0]` even
+        // though it was listed second. 3 dB is 10^(3/20) = 1.412538 after rounding.
         assert!(
             graph.complex.contains(
-                "[0:a]atrim=start=0:duration=2,asetpts=PTS-STARTPTS,atempo=0.5,adelay=1000|1000,\
-                 afade=t=in:st=0:d=0.5,afade=t=out:st=2.5:d=0.5[a0]"
+                "[1:a]atrim=start=0:duration=1.5,asetpts=PTS-STARTPTS,adelay=500|500,\
+                 volume=1.412538[a0]"
             ),
             "{}",
             graph.complex
         );
-        // A 1x clip gets no `atempo` at all, and no fades.
+        // The 0.5x clip at frame 30 is `[a1]`: `atempo=0.5` and both fades. A 1x clip would
+        // get no `atempo` at all, and 0 dB would get no `volume`.
         assert!(
-            graph
-                .complex
-                .contains("[1:a]atrim=start=0:duration=1.5,asetpts=PTS-STARTPTS,adelay=500|500,volume=1.412537[a1]"),
+            graph.complex.contains(
+                "[0:a]atrim=start=0:duration=2,asetpts=PTS-STARTPTS,atempo=0.5,adelay=1000|1000,\
+                 afade=t=in:st=0:d=0.5,afade=t=out:st=2.5:d=0.5[a1]"
+            ),
             "{}",
             graph.complex
         );
@@ -1347,15 +1351,31 @@ mod tests {
 
     #[test]
     fn a_silent_base_keeps_the_audio_track_shape_stable() {
-        // Audio-only timeline: the base source is still emitted, and no real mix happens.
+        // Video only: `graph.ts` still produces `[aout]`, as a silent generator, so the
+        // output always carries the preset's AAC track.
+        let graph = build_filter_graph(&config(), &[plain_video_clip(0, 0)], &[]).unwrap();
+        assert!(
+            graph.complex.contains(
+                "anullsrc=channel_layout=stereo:sample_rate=48000,atrim=duration=10,\
+                 asetpts=PTS-STARTPTS[aout]"
+            ),
+            "{}",
+            graph.complex
+        );
+        assert!(!graph.has_mixed_audio(), "there is nothing to mix");
+        assert_eq!(graph.maps, vec!["[base]".to_string(), "[aout]".to_string()]);
+
+        // Audio present: a real mix, and no silent generator.
         let graph = build_filter_graph(&config(), &[], &[plain_audio_clip(0)]).unwrap();
+        assert!(!graph.complex.contains("anullsrc"), "{}", graph.complex);
         assert!(graph
             .complex
-            .contains("anullsrc=channel_layout=stereo:sample_rate=48000"));
+            .contains("amix=inputs=1:normalize=0:dropout_transition=0[aout]"));
+        assert!(graph.has_mixed_audio());
+        // The silent base is emitted even for an audio-only timeline, so `-map [base]` holds.
         assert!(graph
             .complex
             .starts_with("color=c=black:s=1920x1080:r=30/1:d=10[base]"));
-        assert!(graph.has_mixed_audio());
     }
 
     // -----------------------------------------------------------------------
@@ -1556,19 +1576,22 @@ mod tests {
         let config = GraphConfig {
             fps: preset.fps,
             sequence_fps: project_rate,
-            duration_frames: 30_000,
+            // 300 frames at 30000/1001 is 10.01 seconds.
+            duration_frames: 300,
             ..config()
         };
         let graph = build_filter_graph(&config, &[plain_video_clip(0, 0)], &[]).unwrap();
-        // 10 seconds at 29.97 fps, never rounded to `r=30/1`.
+        // Never rounded to `r=30/1`, and never resampled: 300 frames in, 300 out.
         assert!(
             graph
                 .complex
-                .starts_with("color=c=black:s=1920x1080:r=30000/1001:d=10[base]"),
+                .starts_with("color=c=black:s=1920x1080:r=30000/1001:d=10.01[base]"),
             "{}",
             graph.complex
         );
-        assert_eq!(graph.total_frames, 29_970);
+        assert!(!graph.complex.contains("r=30/1"), "{}", graph.complex);
+        assert_eq!(graph.duration_seconds, 10.01);
+        assert_eq!(graph.total_frames, 300);
     }
 
     /// The graph keeps the *delivery* rate (`fps`, used for the base source and the frame

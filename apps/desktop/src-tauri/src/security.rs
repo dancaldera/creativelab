@@ -211,21 +211,6 @@ pub fn validate_file_name(candidate: &str, label: &str) -> Result<String, PathEr
     Ok(candidate.to_string())
 }
 
-/// Collapse `.` segments and repeated separators without touching `..`.
-///
-/// Component-wise on purpose: string replacement would corrupt a legitimate name such as
-/// `assets/a..b/c.png`.
-fn normalize_components(candidate: &str) -> String {
-    let mut out: Vec<&str> = Vec::new();
-    for part in candidate.split('/') {
-        if part.is_empty() || part == "." {
-            continue;
-        }
-        out.push(part);
-    }
-    out.join("/")
-}
-
 /// A workspace root that every path argument is resolved against.
 ///
 /// Cheap to clone (one `PathBuf`), which lets commands lift the root out of the mutex
