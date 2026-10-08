@@ -605,7 +605,383 @@ operation for existing assets.`,
   },
 ];
 
-const ALL_ISSUES = [...EPICS, ...FUNCTIONAL_REQUIREMENTS, ...CROSS_CUTTING];
+/**
+ * Known gaps, found by building and cross-verifying the implementation.
+ *
+ * These are **not** derived from the PRD text the way the epics and FRs above are. They are
+ * the places where the shipped code deliberately does not yet do what its own UI or schema
+ * advertises, discovered while implementing and verified by grepping the code — every claim
+ * below names the file that proves it. Each one is either disclosed in the UI (so no user is
+ * misled) or returns an explicit error (so nothing fails silently); the issue exists so the
+ * gap is closed rather than merely documented.
+ *
+ * `parent` links the gap to the requirement it belongs to, so it shows up in that
+ * requirement's checklist — and a gap is deliberately **not** also marked blocked by its
+ * own parent, because the parent closes when its children close. `blockedBy` is reserved
+ * for genuine prerequisites between gaps.
+ */
+const KNOWN_GAPS = [
+  {
+    key: "GAP-GENERATION-CONTRACT",
+    title: "Freeze the generation contract and implement provider submit and poll in the host",
+    parent: "FR-10",
+    milestone: "Phase 2 — AI creation",
+    labels: ["P0", "providers", "host", "decision"],
+    blockedBy: ["FR-08"],
+    source: SECTION.jobs,
+    body: `**This is the largest remaining gap: the desktop app cannot submit a generation.**
+
+\`apps/desktop/src-tauri/src/providers.rs\` implements model listing, credential storage and
+credential testing in full, but \`submit_job()\` and \`poll_job()\` both return
+\`CommandError::unsupported\` with the same explanation:
+
+> the per-mode generation request/response contract (image, video, audio, voice) is not frozen
+> in \`protocol.ts\` or \`packages/core/src/jobs.ts\`, so submitting a paid request is
+> deliberately not implemented rather than guessed at. Model listing, credential storage and
+> credential testing are fully implemented.
+
+That is the right call — guessing a paid request shape would be worse than refusing — but it
+means \`IPC_COMMANDS\` has no \`generate\` command, so the Generate panel cannot reach a
+provider. The capability-based adapter layer in \`packages/providers\` *is* complete and is
+exercised end to end by \`pnpm e2e\` through the mock adapter; what is missing is the IPC
+surface and the host-side job runner that joins the two.
+
+## What closing this requires
+
+1. Freeze \`GenerationRequest\` / \`SubmitResult\` / \`JobStatusResult\` as the wire contract
+   (they already exist in \`packages/providers/src/requests.ts\`; the work is deciding what
+   crosses IPC and mirroring it in \`protocol.ts\` and Rust \`serde\` structs).
+2. Add the commands (\`generate_submit\`, \`generate_poll\`, or extend \`job_*\`) to
+   \`IPC_COMMANDS\` **and** to the Rust allowlist — the two are pinned equal by
+   \`security::tests::allowlist_matches_protocol_ts\`, so they cannot drift.
+3. Implement the runner: capability validation, cost estimation, the budget gate, a durable
+   \`generation_jobs\` row, submission under the idempotency key and submission lock, polling
+   with backoff, then download → verify → atomic asset commit (PRD §9's data flow).
+4. Keep the renderer free of keys: submission must happen host-side.
+
+Note the policy boundary this must respect: a job whose submission outcome is unknown becomes
+\`unknown\` and is **never** auto-resubmitted (PRD §12), because a resend could bill twice.`,
+    criteria: [
+      "The generation request/response contract is frozen in `protocol.ts` and mirrored in Rust",
+      "A generation can be submitted, polled and cancelled from the UI against a real provider",
+      "Capability validation and the budget gate run before submission, host-side",
+      "A durable job row exists before submission, so a crash is reconcilable",
+      "Uncertain submissions park in `unknown` and are never auto-resubmitted",
+      "No API key crosses into the webview at any point",
+      "`job_retry` and job polling/resumption stop returning `unsupported`",
+    ],
+  },
+  {
+    key: "GAP-RENDER-EFFECTS",
+    title: "Render clip effects in the preview and the export",
+    parent: "FR-12",
+    milestone: "Phase 3 — Polished MVP",
+    labels: ["P1", "media", "ui"],
+    blockedBy: [],
+    source: SECTION.fr,
+    body: `\`packages/media/src/graph.ts\` never reads \`document.effects\` — a grep for \`effect\`
+in that file returns nothing. An effect is therefore stored, persisted, round-tripped and
+listed in the Inspector, but has no effect on the pixels. \`Add effect…\` is disabled and each
+listed entry is badged \`inert\`, so no user is misled (PRD §8), but the feature is not real.
+
+The schema already names the kinds to support: \`brightness\`, \`contrast\`, \`saturation\`,
+\`blur\`, \`sharpen\`, \`grayscale\`, \`sepia\`, \`vignette\`, \`volume\`, \`eq\`, \`denoise\`.
+
+Most map directly onto FFmpeg filters, which makes this the cheapest of the render gaps:
+\`eq\` (brightness/contrast/saturation), \`unsharp\`, \`boxblur\` or \`gblur\`, \`hue=s=0\`
+(grayscale), a \`colorchannelmixer\` sepia matrix, \`vignette\`, \`hqdn3d\` (denoise), and
+\`volume\`/\`equalizer\` on the audio chain.
+
+Because \`document.effects\` is keyed by \`clipId\` with a \`sortOrder\`, apply them in that
+order, after the transform stages and before \`format=rgba\`, so effects see the cropped and
+scaled image.\n\nThe preview must implement the same maths or FR-04 parity breaks — and
+\`packages/media/src/golden.test.ts\` will now catch that by sampling pixels.`,
+    criteria: [
+      "Every effect kind in the schema is applied, in `sortOrder`, by both renderers",
+      "`enabled: false` skips an effect",
+      "The preview applies the same maths, verified by a golden-frame case",
+      "Effect parameters become authorable in the Inspector once they render",
+      "Stage order is pinned by tests on both sides, as for the transform stages",
+    ],
+  },
+  {
+    key: "GAP-RENDER-KEYFRAMES",
+    title: "Render keyframes with property interpolation",
+    parent: "FR-12",
+    milestone: "Phase 4 — Advanced",
+    labels: ["P2", "media", "ui", "core"],
+    blockedBy: [],
+    source: SECTION.fr,
+    body: `\`document.keyframes\` is stored, persisted and round-tripped, and \`graph.ts\` never reads
+it. Keyframes are the one render gap that is not a straight filter mapping: animating a
+property over time means either time-varying FFmpeg expressions (\`overlay=x='…t…'\`,
+\`colorchannelmixer\` cannot animate its alpha this way) or rendering in segments and
+concatenating, which costs an extra encode generation.
+
+The interpolation maths already exists conceptually in the schema — \`easing\` is one of
+\`linear\`, \`ease-in\`, \`ease-out\`, \`ease-in-out\`, \`hold\`, \`bezier\` — so a shared
+\`sampleProperty(keyframes, property, frame)\` function is the natural first step, used by both
+the preview and the graph. The Inspector currently states that keyframes arrive with FR-12.
+
+The PRD places keyframes in P1/FR-12 and in Phase 4 ("Keyframes, expanded transitions"), which
+is why this is scoped as P2 rather than blocking the MVP.`,
+    criteria: [
+      "A shared interpolator resolves `(property, frame)` to a value for all six easing modes",
+      "Animated `transform.x/y/scale/rotation/opacity` render and match the preview",
+      "Interpolation is exact at keyframe frames and monotonic between them",
+      "Golden-frame cases sample at and between keyframes",
+      "Keyframe authoring is enabled in the Inspector once it renders",
+    ],
+  },
+  {
+    key: "GAP-RENDER-TRANSITIONS",
+    title: "Render transitions, starting with dips to black and white",
+    parent: "FR-12",
+    milestone: "Phase 3 — Polished MVP",
+    labels: ["P1", "media", "ui"],
+    blockedBy: [],
+    source: SECTION.fr,
+    body: `\`graph.ts\` never reads \`transitionIn\`/\`transitionOut\`. All ten kinds the schema names
+(\`crossfade\`, \`dip-to-black\`, \`dip-to-white\`, \`slide-left/right\`, \`wipe-left/right\`,
+\`zoom-in/out\`) are inert. The picker labels each one "(not applied yet)" and disables it, and
+\`RENDERED_TRANSITION_KINDS\` in \`Inspector.tsx\` is the single empty set that gates them.
+
+**Suggested order, cheapest first:**
+
+1. **Dips (\`dip-to-black\`, \`dip-to-white\`)** need no structural change. The composition base
+   is already black, and FFmpeg's \`fade\` filter takes a colour, so a dip is a per-clip
+   \`fade=t=in:color=black\` / \`fade=t=out:color=white\` — the same shape as the existing
+   per-clip stage builders.
+2. **\`crossfade\`** needs the compositor to *overlap* neighbouring clips. The current
+   composition overlays every clip onto one base with
+   \`overlay=…:enable='between(t,start,end)'\`, and each clip's window ends exactly where the
+   next begins, so the outgoing clip is already hidden when the incoming one fades in. Options
+   are \`tpad=stop_mode=clone\` on the outgoing clip plus a window extension (no source
+   headroom needed), or restructuring to per-track \`xfade\` chains.
+3. **Slide, wipe and zoom** need animated \`overlay\` offsets or crop windows.
+
+Whatever lands must be mirrored in \`apps/desktop/src-tauri/src/render.rs\` and covered by a
+golden-frame case; the PRD's §17 test plan names transitions explicitly.`,
+    criteria: [
+      "Dip transitions render in both renderers and in the preview",
+      "Crossfade renders without needing source headroom beyond the clip",
+      "A transition's `durationFrames` is honoured and clamped to the clip length",
+      "`RENDERED_TRANSITION_KINDS` is populated so the picker enables exactly what renders",
+      "Golden-frame cases sample inside each transition, not just before and after",
+    ],
+  },
+  {
+    key: "GAP-RENDER-TITLES",
+    title: "Render titles and text overlays",
+    parent: "FR-12",
+    milestone: "Phase 4 — Advanced",
+    labels: ["P2", "media", "ui"],
+    blockedBy: [],
+    source: SECTION.fr,
+    body: `The schema has no text or title entity, and \`graph.ts\` contains no \`drawtext\`. PRD §9
+suggests Remotion for "deterministic effects/text"; the export path deliberately uses FFmpeg
+filter graphs instead (see ADR-0004), so titles would be \`drawtext\` with a bundled font, or a
+rendered overlay image.
+
+Two things make this more than a one-line addition: font availability and metrics differ across
+machines, so \`drawtext\` output is not reproducible unless a font is shipped and pinned; and
+the PRD's §17 golden tests name "title" as a case that must match preview to output, which
+needs the preview to lay out text identically to FFmpeg.
+
+Worth deciding explicitly: **titles as a clip property** (simplest, one text layer per clip)
+versus **a distinct text/title entity on its own track** (more capable, more schema). The
+current \`caption\` track kind is the nearest existing home.`,
+    criteria: [
+      "A title renders identically in the preview and the export, with a pinned font",
+      "The text entity is stored in the project schema and survives a reopen",
+      "A golden-frame case covers a title, as PRD §17 requires",
+      "The decision between a clip property and a track entity is recorded in an ADR",
+    ],
+  },
+  {
+    key: "GAP-RENDER-CAPTIONS",
+    title: "Render burn-in captions",
+    parent: "FR-11",
+    milestone: "Phase 3 — Polished MVP",
+    labels: ["P1", "media", "ui"],
+    blockedBy: [],
+    source: SECTION.fr,
+    body: `FR-11 requires "Speech-to-text, editable word/segment timing, SRT export, burn-in
+captions". Transcription, editable timings and \`srtTimestamp\` exist in
+\`apps/desktop/src/components/captionUtils.ts\`, but **burn-in is not rendered**: \`graph.ts\`
+contains no reference to captions, subtitles, \`drawtext\` or burning, and the export preset's
+\`burnInCaptions\` flag is only defined in \`packages/core/src/schema.ts\` — nothing in
+\`packages/media\` or the Rust host reads it.
+
+So the Export dialog's burn-in switch currently does nothing, which is the same
+silently-ignored pattern as transitions and needs either implementation or the same disclosure
+treatment.
+
+Implementation is \`subtitles=…\` against a generated SRT (FFmpeg's \`subtitles\` filter, or
+\`ass\` for styling), which reuses the SRT writer the panel already needs. That also keeps the
+caption rendering path separate from the title path above.`,
+    criteria: [
+      "`burnInCaptions: true` burns captions into the exported file",
+      "The SRT used for burning is the same one the export writes",
+      "A golden-frame case asserts captions appear at the right frames",
+      "The flag is either honoured or the control is disabled and disclosed, never silently ignored",
+    ],
+  },
+  {
+    key: "GAP-BLEND-MODES",
+    title: "Add a blend-mode field to the schema and composite it",
+    parent: "FR-12",
+    milestone: "Phase 4 — Advanced",
+    labels: ["P2", "core", "media", "ui"],
+    blockedBy: [],
+    source: SECTION.fr,
+    body: `The Inspector lists blend mode as unsupported, and both halves of that are true: there is
+no \`blend\` field in \`ClipProperties\` (\`grep -c blend packages/core/src/schema.ts\` returns 0)
+and no compositing pass that would honour one. PRD §6 says "blend where supported", and PRD §4
+places "GPU effects parity with desktop NLEs" out of scope, so this is a deliberate deferral
+rather than an oversight.
+
+Closing it means a schema field plus a new migration (never an edit to an applied one — see
+\`runMigrations\`'s checksum guard), a per-clip blend stage, and preview parity. FFmpeg's
+\`blend\` filter covers the common modes but needs two inputs, which does not fit the current
+"overlay everything onto one base" composition; \`overlay\` alone offers no blend modes, so this
+may force the per-track composition refactor that \`crossfade\` also wants.`,
+    criteria: [
+      "A migration adds the blend field without editing `0001_init.sql`",
+      "At least `normal`, `multiply`, `screen` and `overlay` render",
+      "Preview and export agree, verified by a golden-frame case",
+      "The composition refactor this needs is either done or explicitly recorded as the blocker",
+    ],
+  },
+  {
+    key: "GAP-LIVE-PROVIDERS",
+    title: "Verify the provider adapters against live APIs with real credentials",
+    parent: "FR-08",
+    milestone: "Phase 2 — AI creation",
+    labels: ["P1", "providers", "quality"],
+    blockedBy: ["GAP-GENERATION-CONTRACT"],
+    source: SECTION.providers,
+    body: `Every adapter test in this repository runs against a **mocked** \`fetch\`, deliberately:
+the contract suite is table-driven across the mock, Vercel AI Gateway, ElevenLabs and Cloudflare
+adapters and asserts normalization, 429 + \`Retry-After\` retry, retryable 500s, malformed
+bodies, credential errors with a proven no-leak assertion, and rejection of expired output URLs.
+That proves the *shape* of the integration, not that it matches the provider's live API today.
+
+Two things are therefore unverified in the session that produced this code:
+
+1. That the request paths, payload field names and auth headers match each provider's current
+   published API. The adapter authors made judgement calls — for example the Vercel gateway
+   paths are configurable defaults because the gateway's exact REST paths evolve, and
+   \`cancel()\` on ElevenLabs and Cloudflare is a documented no-op because both APIs are
+   synchronous.
+2. That a real generation round trip works: submit, poll, download, verify, commit as an asset,
+   with a real cost recorded.
+
+PRD §20 explicitly warns that "specific provider models, costs, capabilities, licensing and
+availability must be revalidated during development". This issue is that revalidation.`,
+    criteria: [
+      "Model listing works against each live provider and normalizes into `ModelDescriptor`",
+      "One real generation per modality completes and commits a valid asset",
+      "Provider-reported cost is recorded and matches the estimate within a documented tolerance",
+      "Any path, field name or capability that differs from the adapters is corrected, with the fixture updated",
+      "Only test accounts and small/cheap requests are used, and no key is committed",
+    ],
+  },
+  {
+    key: "GAP-APP-ICON",
+    title: "Replace the generated placeholder app icon before release packaging",
+    parent: "CI-INSTALLERS",
+    milestone: "Phase 3 — Polished MVP",
+    labels: ["P1", "host", "docs"],
+    blockedBy: ["CI-INSTALLERS"],
+    source: SECTION.milestones,
+    body: `\`apps/desktop/src-tauri/icons/icon.png\` is generated programmatically by \`build.rs\`
+(a 512x512 RGBA PNG with CRC-validated chunks) purely because \`tauri::generate_context!\`
+requires the file to exist. It is placeholder art, not a designed icon, and \`bundle.icon\` in
+\`tauri.conf.json\` is consequently \`[]\`.
+
+A release build needs a real iconset: a designed source image, then
+\`tauri icon <source.png>\` to generate the .icns/.ico and the multi-size PNG set, and
+\`bundle.icon\` populated from it. This blocks signed macOS packaging in practice, so it belongs
+with the installer work rather than on its own.`,
+    criteria: [
+      "A designed source icon exists and is committed",
+      "`tauri icon` generates the platform iconsets and `bundle.icon` lists them",
+      "The generated placeholder is deleted so it cannot silently ship",
+      "A packaged build shows the real icon in Finder and the dock",
+    ],
+  },
+  {
+    key: "GAP-SECURITY-REVIEW",
+    title: "Commission an independent security review",
+    parent: "EPIC-H",
+    milestone: "Phase 4 — Advanced",
+    labels: ["P2", "security", "quality"],
+    blockedBy: [],
+    source: SECTION.security,
+    body: `\`docs/SECURITY.md\` states plainly that **no third-party security audit has been
+performed**. The guarantees in it are enforced and tested — keys confined to the OS keychain
+with a schema that cannot hold a secret, an allowlisted IPC surface pinned equal to
+\`protocol.ts\` by a test, workspace-scoped path validation including symlink escape, argument-array
+process spawning proven against \`; rm -rf / && $(whoami)\`, and redaction that is asserted by the
+*absence* of a secret rather than the presence of a placeholder — but they are the author's own
+claims about the author's own code.
+
+Because this product handles the user's media and their provider credentials, and because a
+defect would be a credential or media exposure rather than a cosmetic bug, an outside review is
+worth scheduling before any public release, not after.
+
+The documented limitations in \`docs/SECURITY.md\` are the natural starting brief: provider-side
+retention is out of our control, protection is only as strong as the OS account, media is not
+re-encoded for sanitisation so an FFmpeg codec vulnerability is a vulnerability here, and the
+clip-effect/keyframe gap is a fidelity issue rather than a security one.`,
+    criteria: [
+      "An independent review covers the IPC allowlist, path scoping, credential handling, redaction and process spawning",
+      "Findings are triaged into issues with severities, and fixes are closed with tests",
+      "The review scope and date are recorded in `docs/SECURITY.md`",
+      "The pinned FFmpeg build and its provenance are part of the review",
+    ],
+  },
+  {
+    key: "GAP-GOLDEN-BASELINES",
+    title: "Decide how golden-frame reference images are stored",
+    parent: "GOLDEN-FRAMES",
+    milestone: "Phase 3 — Polished MVP",
+    labels: ["P1", "decision", "quality"],
+    blockedBy: [],
+    source: SECTION.testPlan,
+    body: `\`packages/media/src/golden.test.ts\` deliberately commits **no reference images**. Each
+case asserts a property of known geometry — "the centre of a half-scaled red clip is red and its
+corner is black" — with an explicit tolerance, because a byte-exact golden file fails on every
+FFmpeg or x264 upgrade for reasons unrelated to this codebase.
+
+That is defensible and it found a real defect on its first run (a preview/export parity break on
+\`transform.scale\`), but it has limits: it can prove a colour is present, not that a composite
+frame looks *right*, and it cannot validate a gradient, a font's rendering, or a complex
+transition. PRD §17 asks for "visual golden tests" without prescribing the mechanism.
+
+This issue is the explicit decision so it does not get made by accident:
+
+**Option A — geometry assertions only (current).** No binaries in git, immune to encoder drift,
+weaker coverage of composites.
+**Option B — committed reference PNGs plus a perceptual diff.** Strong coverage, needs a
+documented tolerance, a regeneration command, and a policy for accepting an intentional change;
+adds binary files to the repository.
+**Option C — hybrid.** Geometry assertions as the always-on gate in CI, plus a smaller set of
+reference images for a few composite cases that only runs on demand or on a nightly schedule.
+
+A decision is needed before captions and transitions land, because those are the cases where
+Option A is weakest.`,
+    criteria: [
+      "One of the three options is chosen and recorded, in an ADR if it is B or C",
+      "If reference images are stored, there is a documented regeneration command and tolerance",
+      "The decision explains what happens when an intentional visual change is made",
+      "Whichever option is chosen runs in CI with a stated runtime budget",
+    ],
+  },
+];
+
+const ALL_ISSUES = [...EPICS, ...FUNCTIONAL_REQUIREMENTS, ...CROSS_CUTTING, ...KNOWN_GAPS];
 
 // ---------------------------------------------------------------------------
 // Runners
@@ -669,7 +1045,10 @@ function prdLink(section, label) {
 
 function buildBody(issue) {
   const lines = [];
-  lines.push(`> **Source of truth:** ${prdLink(SECTION.fr, "PRD §7")} · \`${PRD}\``);
+  // Epics and FRs come from PRD §7/§16; gap issues cite the section they actually belong to
+  // (§12 for the job contract, §13 for the review, §17 for the test-plan decision, ...).
+  const source = issue.source ?? SECTION.fr;
+  lines.push(`> **Source of truth:** ${prdLink(source, "PRD")} · \`${PRD}\``);
   lines.push("");
   lines.push(issue.body);
   lines.push("");
@@ -857,16 +1236,28 @@ function main() {
   // 4. Sub-issues: functional requirements and cross-cutting work under an epic ---
   process.stdout.write(`→ sub-issue hierarchy\n`);
   for (const issue of issues) {
-    if (!issue.key.startsWith("FR-")) continue;
+    // FR issues attach to an epic via `epic`; gap issues attach via `parent`. Everything else
+    // (epics, cross-cutting issues) is already at the top level.
+    if (!issue.key.startsWith("FR-") && !issue.parent) continue;
+    // An explicit `parent` key wins, which is how the gap issues attach to the requirement
+    // they belong to (or to a cross-cutting issue such as the golden-frame suite). Otherwise
     // `issue.epic` is a bare letter, or two letters for a requirement that spans epics
-    // (e.g. FR-02 is "B/D" — persistence *and* media). A GitHub sub-issue has exactly one
-    // parent, so the first letter is filed as the primary epic; the blocked-by edges carry
-    // the secondary relationship. The issue map is keyed by the full "EPIC-A" identifier,
-    // and getting that wrong silently skipped every link.
-    const epicLetter = (issue.epic ?? "").split("/")[0];
-    if (epicLetter.length === 0) continue;
-    const epicKey = `EPIC-${epicLetter}`;
-    const parent = created.get(epicKey);
+    // (FR-02 is "B/D" — persistence *and* media). A GitHub sub-issue has exactly one parent,
+    // so the first letter is the primary epic and the blocked-by edges carry the secondary
+    // relationship. The issue map is keyed by the full "EPIC-A"/"FR-12" identifier, and
+    // getting that wrong silently skipped every link.
+    let parent;
+    if (issue.parent) {
+      parent = created.get(issue.parent);
+      if (!parent) {
+        process.stdout.write(`  ! ${issue.key}: unknown parent ${issue.parent}\n`);
+        continue;
+      }
+    } else {
+      const epicLetter = (issue.epic ?? "").split("/")[0];
+      if (epicLetter.length === 0) continue;
+      parent = created.get(`EPIC-${epicLetter}`);
+    }
     const child = created.get(issue.key);
     if (!parent || !child) continue;
     try {
