@@ -9,6 +9,10 @@ build/
 apps/desktop/src-tauri/target/
 apps/desktop/dist/
 
+# Tauri regenerates these from the Cargo dependency graph on every dev/build run, so
+# tracking them produces large, meaningless diffs whenever a plugin version changes.
+apps/desktop/src-tauri/gen/schemas/
+
 # test / coverage
 coverage/
 .vitest/

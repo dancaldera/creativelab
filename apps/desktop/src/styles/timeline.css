@@ -51,14 +51,13 @@
 .timeline__lanes {
   position: relative;
   overflow: auto;
-  background:
-    repeating-linear-gradient(
-      to right,
-      transparent 0,
-      transparent calc(var(--second-width, 120px) - 1px),
-      var(--border-subtle) calc(var(--second-width, 120px) - 1px),
-      var(--border-subtle) var(--second-width, 120px)
-    );
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(var(--second-width, 120px) - 1px),
+    var(--border-subtle) calc(var(--second-width, 120px) - 1px),
+    var(--border-subtle) var(--second-width, 120px)
+  );
 }
 
 .timeline__content {

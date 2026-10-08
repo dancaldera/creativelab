@@ -12,7 +12,14 @@
  */
 import { useState } from "react";
 import { getBridge } from "../bridge";
-import { useCredentials, useDeleteCredential, useModels, useRefreshCatalog, useSetCredential, useTestCredential } from "../hooks/queries";
+import {
+  useCredentials,
+  useDeleteCredential,
+  useModels,
+  useRefreshCatalog,
+  useSetCredential,
+  useTestCredential,
+} from "../hooks/queries";
 import { useEditorStore } from "../state/editorStore";
 import { useUiStore } from "../state/uiStore";
 import { DEFAULT_BUDGET_POLICY_LOCAL } from "../state/coreOps";
@@ -23,7 +30,11 @@ import { formatMoney } from "../utils/money";
 const PROVIDERS = [
   { id: "vercel-gateway", label: "Vercel AI Gateway", baseUrl: "https://ai-gateway.vercel.sh" },
   { id: "elevenlabs", label: "ElevenLabs (direct)", baseUrl: "https://api.elevenlabs.io" },
-  { id: "cloudflare-ai", label: "Cloudflare Workers AI", baseUrl: "https://api.cloudflare.com/client/v4" },
+  {
+    id: "cloudflare-ai",
+    label: "Cloudflare Workers AI",
+    baseUrl: "https://api.cloudflare.com/client/v4",
+  },
 ] as const;
 
 type Tab = "providers" | "models" | "budget" | "storage" | "accessibility";
@@ -73,7 +84,10 @@ export function SettingsDialog() {
       setSecrets((current) => ({ ...current, [providerId]: "" }));
       showToast(`${providerId} credential stored in the OS credential store.`, "info");
     } catch (error) {
-      showToast(`Could not store the credential: ${error instanceof Error ? error.message : String(error)}`, "error");
+      showToast(
+        `Could not store the credential: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   };
 
@@ -96,7 +110,12 @@ export function SettingsDialog() {
       <div className="dialog dialog--wide">
         <div className="dialog__header">
           <h2 className="dialog__title">Settings</h2>
-          <button type="button" className="btn" onClick={() => setSettingsOpen(false)} aria-label="Close settings">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setSettingsOpen(false)}
+            aria-label="Close settings"
+          >
             Close
           </button>
         </div>
@@ -128,8 +147,9 @@ export function SettingsDialog() {
           {tab === "providers" ? (
             <section className="stack">
               <p className="small muted">
-                Keys are written straight to the OS credential store through the native bridge. They are never rendered back, never put in a
-                URL, never logged and never written into a project file (PRD §13).
+                Keys are written straight to the OS credential store through the native bridge. They
+                are never rendered back, never put in a URL, never logged and never written into a
+                project file (PRD §13).
               </p>
               {PROVIDERS.map((provider) => {
                 const hasSecret = hasSecretFor(provider.id);
@@ -137,7 +157,9 @@ export function SettingsDialog() {
                   <div className="section" key={provider.id}>
                     <div className="section__header" style={{ cursor: "default" }}>
                       <span>{provider.label}</span>
-                      <span className={`badge ${hasSecret ? "badge--success" : ""}`}>{hasSecret ? "key stored" : "no key"}</span>
+                      <span className={`badge ${hasSecret ? "badge--success" : ""}`}>
+                        {hasSecret ? "key stored" : "no key"}
+                      </span>
                     </div>
                     <div className="section__body">
                       <div className="field">
@@ -146,7 +168,12 @@ export function SettingsDialog() {
                           id={`base-url-${provider.id}`}
                           className="input"
                           value={baseUrls[provider.id] ?? ""}
-                          onChange={(event) => setBaseUrls((current) => ({ ...current, [provider.id]: event.target.value }))}
+                          onChange={(event) =>
+                            setBaseUrls((current) => ({
+                              ...current,
+                              [provider.id]: event.target.value,
+                            }))
+                          }
                         />
                       </div>
 
@@ -161,7 +188,12 @@ export function SettingsDialog() {
                             spellCheck={false}
                             placeholder={hasSecret ? "•••••••• (stored)" : "Paste a key"}
                             value={secrets[provider.id] ?? ""}
-                            onChange={(event) => setSecrets((current) => ({ ...current, [provider.id]: event.target.value }))}
+                            onChange={(event) =>
+                              setSecrets((current) => ({
+                                ...current,
+                                [provider.id]: event.target.value,
+                              }))
+                            }
                             aria-describedby={`secret-help-${provider.id}`}
                           />
                           <span className="small muted" id={`secret-help-${provider.id}`}>
@@ -169,7 +201,11 @@ export function SettingsDialog() {
                           </span>
                         </div>
                         <div className="row">
-                          <button type="button" className="btn btn--primary" onClick={() => void saveSecret(provider.id)}>
+                          <button
+                            type="button"
+                            className="btn btn--primary"
+                            onClick={() => void saveSecret(provider.id)}
+                          >
                             Save key
                           </button>
                           <button
@@ -187,9 +223,14 @@ export function SettingsDialog() {
                             onClick={() =>
                               void deleteCredential
                                 .mutateAsync(provider.id)
-                                .then(() => showToast(`Removed the ${provider.id} credential.`, "warn"))
+                                .then(() =>
+                                  showToast(`Removed the ${provider.id} credential.`, "warn"),
+                                )
                                 .catch((error: unknown) =>
-                                  showToast(`Could not remove the credential: ${error instanceof Error ? error.message : String(error)}`, "error"),
+                                  showToast(
+                                    `Could not remove the credential: ${error instanceof Error ? error.message : String(error)}`,
+                                    "error",
+                                  ),
                                 )
                             }
                           >
@@ -208,7 +249,9 @@ export function SettingsDialog() {
                 );
               })}
               <span className="sr-only" role="status" aria-live="polite">
-                {credentials.isFetching ? "Refreshing credential list" : `${credentials.data?.length ?? 0} credentials stored`}
+                {credentials.isFetching
+                  ? "Refreshing credential list"
+                  : `${credentials.data?.length ?? 0} credentials stored`}
               </span>
             </section>
           ) : null}
@@ -217,7 +260,8 @@ export function SettingsDialog() {
             <section className="stack">
               <div className="row">
                 <span className="small muted">
-                  Last refreshed {formatRelative(models.data?.fetchedAt)} ({formatTimestamp(models.data?.fetchedAt)})
+                  Last refreshed {formatRelative(models.data?.fetchedAt)} (
+                  {formatTimestamp(models.data?.fetchedAt)})
                 </span>
                 <div className="spacer" />
                 <label className="row small">
@@ -233,20 +277,29 @@ export function SettingsDialog() {
                   />
                   days
                 </label>
-                <button type="button" className="btn" disabled={refreshCatalog.isPending} onClick={() => void refreshCatalog.mutateAsync(undefined)}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={refreshCatalog.isPending}
+                  onClick={() => void refreshCatalog.mutateAsync(undefined)}
+                >
                   {refreshCatalog.isPending ? "Refreshing…" : "Refresh catalog"}
                 </button>
               </div>
 
               {(models.data?.errors ?? []).length > 0 ? (
                 <p className="callout callout--warning">
-                  {(models.data?.errors ?? []).map((error) => `${error.providerId}: ${error.message}`).join(" · ")}
+                  {(models.data?.errors ?? [])
+                    .map((error) => `${error.providerId}: ${error.message}`)
+                    .join(" · ")}
                 </p>
               ) : null}
 
               <div className="model-catalog">
                 <table>
-                  <caption className="sr-only">Cached model catalog with capabilities and pricing</caption>
+                  <caption className="sr-only">
+                    Cached model catalog with capabilities and pricing
+                  </caption>
                   <thead>
                     <tr>
                       <th scope="col">Model</th>
@@ -261,11 +314,19 @@ export function SettingsDialog() {
                   <tbody>
                     {(models.data?.models ?? []).map((model) => {
                       const capabilities = model.capabilities as Record<string, unknown>;
-                      const modes = Array.isArray(capabilities["modes"]) ? (capabilities["modes"] as string[]) : [];
-                      const price = typeof capabilities["unitPrice"] === "number" ? (capabilities["unitPrice"] as number) : null;
-                      const unit = typeof (capabilities["pricing"] as Record<string, unknown> | null)?.["unit"] === "string"
-                        ? String((capabilities["pricing"] as Record<string, unknown>)["unit"])
-                        : "job";
+                      const modes = Array.isArray(capabilities["modes"])
+                        ? (capabilities["modes"] as string[])
+                        : [];
+                      const price =
+                        typeof capabilities["unitPrice"] === "number"
+                          ? (capabilities["unitPrice"] as number)
+                          : null;
+                      const unit =
+                        typeof (capabilities["pricing"] as Record<string, unknown> | null)?.[
+                          "unit"
+                        ] === "string"
+                          ? String((capabilities["pricing"] as Record<string, unknown>)["unit"])
+                          : "job";
                       const staleAge = model.fetchedAt
                         ? Date.now() - Date.parse(model.fetchedAt) > staleDays * 86_400_000
                         : false;
@@ -276,10 +337,19 @@ export function SettingsDialog() {
                           <td>{model.modality}</td>
                           <td className="small">{modes.join(", ") || "—"}</td>
                           <td>{capabilities["supportsNegativePrompt"] === true ? "yes" : "no"}</td>
-                          <td className="mono">{price === null ? "unknown" : formatMoney({ amount: price, currency: "USD" })} / {unit}</td>
+                          <td className="mono">
+                            {price === null
+                              ? "unknown"
+                              : formatMoney({ amount: price, currency: "USD" })}{" "}
+                            / {unit}
+                          </td>
                           <td className="small">
                             {formatRelative(model.fetchedAt)}
-                            {model.isStale || staleAge ? <span className="badge badge--warning" style={{ marginLeft: 6 }}>stale</span> : null}
+                            {model.isStale || staleAge ? (
+                              <span className="badge badge--warning" style={{ marginLeft: 6 }}>
+                                stale
+                              </span>
+                            ) : null}
                           </td>
                         </tr>
                       );
@@ -293,7 +363,8 @@ export function SettingsDialog() {
           {tab === "budget" ? (
             <section className="stack">
               <p className="small muted">
-                These limits are checked before every paid submission; an unknown price is treated as unknown, never as free (PRD §13).
+                These limits are checked before every paid submission; an unknown price is treated
+                as unknown, never as free (PRD §13).
               </p>
               <div className="field-grid">
                 <div className="field">
@@ -305,7 +376,9 @@ export function SettingsDialog() {
                     min={0}
                     step={0.5}
                     value={policy.maxCostPerJob ?? 0}
-                    onChange={(event) => setPolicy({ ...policy, maxCostPerJob: Number(event.target.value) || 0 })}
+                    onChange={(event) =>
+                      setPolicy({ ...policy, maxCostPerJob: Number(event.target.value) || 0 })
+                    }
                   />
                 </div>
                 <div className="field">
@@ -317,7 +390,9 @@ export function SettingsDialog() {
                     min={0}
                     step={1}
                     value={policy.dailyCeiling ?? 0}
-                    onChange={(event) => setPolicy({ ...policy, dailyCeiling: Number(event.target.value) || 0 })}
+                    onChange={(event) =>
+                      setPolicy({ ...policy, dailyCeiling: Number(event.target.value) || 0 })
+                    }
                   />
                 </div>
                 <div className="field">
@@ -329,7 +404,12 @@ export function SettingsDialog() {
                     min={0}
                     step={0.5}
                     value={policy.requireApprovalAbove ?? 0}
-                    onChange={(event) => setPolicy({ ...policy, requireApprovalAbove: Number(event.target.value) || 0 })}
+                    onChange={(event) =>
+                      setPolicy({
+                        ...policy,
+                        requireApprovalAbove: Number(event.target.value) || 0,
+                      })
+                    }
                   />
                 </div>
                 <div className="field">
@@ -352,14 +432,22 @@ export function SettingsDialog() {
                 <input
                   type="checkbox"
                   checked={policy.blockUnknownPricing}
-                  onChange={(event) => setPolicy({ ...policy, blockUnknownPricing: event.target.checked })}
+                  onChange={(event) =>
+                    setPolicy({ ...policy, blockUnknownPricing: event.target.checked })
+                  }
                 />
                 Block jobs whose price the provider cannot quote
               </label>
               <p className="small muted">
-                Current policy: {formatMoney({ amount: policy.maxCostPerJob ?? 0, currency: policy.currency })} per job ·{" "}
-                {formatMoney({ amount: policy.dailyCeiling ?? 0, currency: policy.currency })} per day · approval above{" "}
-                {formatMoney({ amount: policy.requireApprovalAbove ?? 0, currency: policy.currency })}.
+                Current policy:{" "}
+                {formatMoney({ amount: policy.maxCostPerJob ?? 0, currency: policy.currency })} per
+                job · {formatMoney({ amount: policy.dailyCeiling ?? 0, currency: policy.currency })}{" "}
+                per day · approval above{" "}
+                {formatMoney({
+                  amount: policy.requireApprovalAbove ?? 0,
+                  currency: policy.currency,
+                })}
+                .
               </p>
             </section>
           ) : null}
@@ -367,7 +455,12 @@ export function SettingsDialog() {
           {tab === "storage" ? (
             <section className="stack">
               <div className="row">
-                <button type="button" className="btn" onClick={() => void loadUsage()} disabled={!workspacePath}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void loadUsage()}
+                  disabled={!workspacePath}
+                >
                   Measure cache
                 </button>
                 <button
@@ -381,7 +474,12 @@ export function SettingsDialog() {
                         showToast(`Cleaned ${response.purged.length} cache directories.`, "info");
                         setStorage({ bytes: 0, reclaimable: 0 });
                       })
-                      .catch((error: unknown) => showToast(`Cleanup failed: ${error instanceof Error ? error.message : String(error)}`, "error"))
+                      .catch((error: unknown) =>
+                        showToast(
+                          `Cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
+                          "error",
+                        ),
+                      )
                   }
                 >
                   Clean reclaimable cache
@@ -396,8 +494,8 @@ export function SettingsDialog() {
                 <dd className="mono">{storage ? formatBytes(storage.reclaimable) : "—"}</dd>
               </dl>
               <p className="small muted">
-                Thumbnails, waveforms and proxies are derived data and safe to delete; originals, generated outputs and exports never are
-                (PRD §11).
+                Thumbnails, waveforms and proxies are derived data and safe to delete; originals,
+                generated outputs and exports never are (PRD §11).
               </p>
             </section>
           ) : null}
@@ -413,21 +511,25 @@ export function SettingsDialog() {
                     setReducedMotion(enabled);
                     // Persisted through the bridge, not localStorage, so the native shell and the
                     // webview agree (PRD §14).
-                    await getBridge().settingsSet({ key: UI_SETTINGS_KEY, value: { ...snapshot(), reducedMotion: enabled } });
+                    await getBridge().settingsSet({
+                      key: UI_SETTINGS_KEY,
+                      value: { ...snapshot(), reducedMotion: enabled },
+                    });
                     showToast(`Reduced motion ${enabled ? "enabled" : "disabled"}.`, "info");
                   }}
                 />
                 Reduce motion (also honours the system setting)
               </label>
               <p className="small muted">
-                Transitions and progress animations are disabled. Focus rings, screen-reader labels and keyboard navigation stay on in both
-                modes.
+                Transitions and progress animations are disabled. Focus rings, screen-reader labels
+                and keyboard navigation stay on in both modes.
               </p>
               <dl className="provenance-grid">
                 <dt>Shortcuts</dt>
                 <dd>
-                  Space play/pause · J/K/L transport · S split · N snap · +/- zoom · Delete remove · Shift+Delete ripple delete · Cmd/Ctrl+Z
-                  undo · Shift+Cmd/Ctrl+Z redo · Cmd/Ctrl+A select all · Escape clear selection
+                  Space play/pause · J/K/L transport · S split · N snap · +/- zoom · Delete remove ·
+                  Shift+Delete ripple delete · Cmd/Ctrl+Z undo · Shift+Cmd/Ctrl+Z redo · Cmd/Ctrl+A
+                  select all · Escape clear selection
                 </dd>
                 <dt>Text contrast</dt>
                 <dd>Body text meets WCAG AA (≥ 4.5:1) against every surface in the theme.</dd>

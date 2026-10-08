@@ -19,13 +19,25 @@ export interface TimelineRulerProps {
 
 const SECOND_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
 
-export function TimelineRuler({ fps, zoom, width, playheadFrame, durationFrames, onScrub }: TimelineRulerProps) {
+export function TimelineRuler({
+  fps,
+  zoom,
+  width,
+  playheadFrame,
+  durationFrames,
+  onScrub,
+}: TimelineRulerProps) {
   const fpsValue = Math.max(1, frameRateAsNumber(fps));
 
   const { majorStepSeconds, minorStepFrames } = useMemo(() => {
     const targetPx = 96;
-    const step = SECOND_STEPS.find((candidate) => candidate * fpsValue * zoom >= targetPx) ?? SECOND_STEPS[SECOND_STEPS.length - 1]!;
-    return { majorStepSeconds: step, minorStepFrames: Math.max(1, Math.round((step * fpsValue) / 5)) };
+    const step =
+      SECOND_STEPS.find((candidate) => candidate * fpsValue * zoom >= targetPx) ??
+      SECOND_STEPS[SECOND_STEPS.length - 1]!;
+    return {
+      majorStepSeconds: step,
+      minorStepFrames: Math.max(1, Math.round((step * fpsValue) / 5)),
+    };
   }, [fpsValue, zoom]);
 
   const ticks = useMemo(() => {
@@ -36,7 +48,11 @@ export function TimelineRuler({ fps, zoom, width, playheadFrame, durationFrames,
     if (minorPx >= 6) {
       for (let frame = 0; frame <= durationFrames + majorFrames; frame += minorStepFrames) {
         const isMajor = frame % majorFrames === 0;
-        items.push({ frame, major: isMajor, label: isMajor ? formatTimecode(frame, fps, false) : null });
+        items.push({
+          frame,
+          major: isMajor,
+          label: isMajor ? formatTimecode(frame, fps, false) : null,
+        });
       }
     } else {
       for (let frame = 0; frame <= durationFrames + majorFrames; frame += majorFrames) {

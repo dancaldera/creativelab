@@ -114,7 +114,11 @@ class DocumentHistory {
   push(label: string, next: EditorDocument, coalesce: boolean): void {
     const at = this.clock();
     const shouldCoalesce =
-      coalesce && this.future.length === 0 && this.past.length > 0 && this.present.label === label && at - this.lastPushAt <= this.coalesceWindowMs;
+      coalesce &&
+      this.future.length === 0 &&
+      this.past.length > 0 &&
+      this.present.label === label &&
+      at - this.lastPushAt <= this.coalesceWindowMs;
     if (!shouldCoalesce) {
       this.past.push(this.present);
       if (this.past.length > this.limit) this.past.shift();
@@ -207,7 +211,12 @@ export interface EditorState {
 
   // -- timeline operations -------------------------------------------------
   splitAtPlayhead: () => void;
-  trimClipEdge: (clipId: string, edge: "start" | "end", toFrame: number, options?: { coalesce?: boolean }) => void;
+  trimClipEdge: (
+    clipId: string,
+    edge: "start" | "end",
+    toFrame: number,
+    options?: { coalesce?: boolean },
+  ) => void;
   moveClip: (
     clipId: string,
     toStartFrame: number,
@@ -220,7 +229,11 @@ export interface EditorState {
   removeTrack: (trackId: string) => void;
   updateTrack: (trackId: string, patch: Partial<Track>, options?: { coalesce?: boolean }) => void;
   reorderTrack: (trackId: string, direction: -1 | 1) => void;
-  setClipProperties: (clipId: string, patch: DeepPartial<Clip["properties"]>, options?: { coalesce?: boolean }) => void;
+  setClipProperties: (
+    clipId: string,
+    patch: DeepPartial<Clip["properties"]>,
+    options?: { coalesce?: boolean },
+  ) => void;
   closeGaps: (trackId: string) => void;
 
   // -- helpers -------------------------------------------------------------
@@ -333,9 +346,11 @@ export function createEditorStore(initialDocument: EditorDocument = DEFAULT_DOCU
         set({ playheadFrame: clamp(Math.round(frame), 0, Math.max(0, duration)) });
       },
 
-      setZoom: (pixelsPerFrame) => set({ zoom: clamp(pixelsPerFrame, MIN_ZOOM_PX_PER_FRAME, MAX_ZOOM_PX_PER_FRAME) }),
+      setZoom: (pixelsPerFrame) =>
+        set({ zoom: clamp(pixelsPerFrame, MIN_ZOOM_PX_PER_FRAME, MAX_ZOOM_PX_PER_FRAME) }),
 
-      zoomBy: (factor) => set({ zoom: clamp(get().zoom * factor, MIN_ZOOM_PX_PER_FRAME, MAX_ZOOM_PX_PER_FRAME) }),
+      zoomBy: (factor) =>
+        set({ zoom: clamp(get().zoom * factor, MIN_ZOOM_PX_PER_FRAME, MAX_ZOOM_PX_PER_FRAME) }),
 
       setEditMode: (editMode) => set({ editMode }),
 
@@ -343,7 +358,8 @@ export function createEditorStore(initialDocument: EditorDocument = DEFAULT_DOCU
 
       setVolume: (volume) => set({ volume: clamp(volume, 0, 1) }),
 
-      setPlaying: (isPlaying, rate) => set({ isPlaying, playbackRate: rate ?? (isPlaying ? 1 : 0) }),
+      setPlaying: (isPlaying, rate) =>
+        set({ isPlaying, playbackRate: rate ?? (isPlaying ? 1 : 0) }),
 
       setPlaybackRate: (rate) => set({ playbackRate: rate, isPlaying: rate !== 0 }),
 
@@ -432,8 +448,16 @@ export function createEditorStore(initialDocument: EditorDocument = DEFAULT_DOCU
         if (!clip) return Math.max(0, Math.round(toStartFrame));
         void toTrackId;
         if (!snapEnabled) return Math.max(0, Math.round(toStartFrame));
-        const targets = collectSnapTargets(document.clips, { excludeClipIds: [clipId], playheadFrame });
-        return snapClipMove(Math.max(0, Math.round(toStartFrame)), clip.durationFrames, targets, SNAP_THRESHOLD_FRAMES).frame;
+        const targets = collectSnapTargets(document.clips, {
+          excludeClipIds: [clipId],
+          playheadFrame,
+        });
+        return snapClipMove(
+          Math.max(0, Math.round(toStartFrame)),
+          clip.durationFrames,
+          targets,
+          SNAP_THRESHOLD_FRAMES,
+        ).frame;
       },
 
       deleteSelected: () => {
@@ -443,7 +467,10 @@ export function createEditorStore(initialDocument: EditorDocument = DEFAULT_DOCU
         const ids = targets.map((clip) => clip.id);
         // Insert mode is a ripple-close edit mode; overwrite/replace leave the gap.
         const clips = deleteClipsOp(document.clips, ids, { ripple: editMode === "insert" });
-        commit(ids.length > 1 ? `Delete ${ids.length} clips` : "Delete clip", { ...document, clips });
+        commit(ids.length > 1 ? `Delete ${ids.length} clips` : "Delete clip", {
+          ...document,
+          clips,
+        });
         set({ selection: new Set<string>() });
       },
 
@@ -451,7 +478,10 @@ export function createEditorStore(initialDocument: EditorDocument = DEFAULT_DOCU
         const { document, selection } = get();
         const targets = editableSelection(document, selection);
         if (targets.length === 0) return;
-        const result = duplicateClipsOp(document.clips, targets.map((clip) => clip.id));
+        const result = duplicateClipsOp(
+          document.clips,
+          targets.map((clip) => clip.id),
+        );
         commit("Duplicate clips", { ...document, clips: result.clips });
         set({ selection: new Set(result.newIds) });
       },
@@ -521,7 +551,9 @@ export const useEditorStore = createEditorStore();
 // ---------------------------------------------------------------------------
 
 export function selectActiveSequence(state: EditorState) {
-  return state.document.sequences.find((sequence) => sequence.isActive) ?? state.document.sequences[0];
+  return (
+    state.document.sequences.find((sequence) => sequence.isActive) ?? state.document.sequences[0]
+  );
 }
 
 export function selectSelectedClip(state: EditorState): Clip | undefined {

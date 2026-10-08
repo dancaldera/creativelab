@@ -116,10 +116,16 @@ export function createJobsStore() {
 
     removeJob: (jobId) => set({ jobs: get().jobs.filter((job) => job.id !== jobId) }),
 
-    resolveAttention: (jobId) => set({ needsAttention: get().needsAttention.filter((entry) => entry.jobId !== jobId) }),
+    resolveAttention: (jobId) =>
+      set({ needsAttention: get().needsAttention.filter((entry) => entry.jobId !== jobId) }),
 
     recordCost: (entry) => {
-      const ledger = [...get().ledger.filter((existing) => existing.jobId !== entry.jobId || existing.kind !== entry.kind), entry];
+      const ledger = [
+        ...get().ledger.filter(
+          (existing) => existing.jobId !== entry.jobId || existing.kind !== entry.kind,
+        ),
+        entry,
+      ];
       set({ ledger });
     },
 
@@ -130,7 +136,8 @@ export function createJobsStore() {
           .reduce((total, entry) => total + entry.amount, 0),
       ),
 
-    clear: () => set({ jobs: EMPTY_JOBS, needsAttention: [], resumed: [], ledger: [], error: null }),
+    clear: () =>
+      set({ jobs: EMPTY_JOBS, needsAttention: [], resumed: [], ledger: [], error: null }),
   }));
 }
 

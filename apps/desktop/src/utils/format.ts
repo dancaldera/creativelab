@@ -111,7 +111,10 @@ export function trackKindLabel(kind: string): string {
 }
 
 /** Frames -> seconds using an asset frame rate, tolerating a null rate. */
-export function framesToSecondsSafe(frames: number | null | undefined, fps: { num: number; den: number } | null | undefined): number | null {
+export function framesToSecondsSafe(
+  frames: number | null | undefined,
+  fps: { num: number; den: number } | null | undefined,
+): number | null {
   if (frames === null || frames === undefined) return null;
   const rate = fps ?? { num: 30, den: 1 };
   if (!rate || rate.num <= 0) return null;

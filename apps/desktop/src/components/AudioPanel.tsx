@@ -46,7 +46,9 @@ export function AudioPanel() {
   const showToast = useUiStore((state) => state.showToast);
   const models = useModels();
 
-  const [script, setScript] = useState("Welcome to the studio. Everything stays on this machine unless you send it somewhere.");
+  const [script, setScript] = useState(
+    "Welcome to the studio. Everything stays on this machine unless you send it somewhere.",
+  );
   const [providerId, setProviderId] = useState("elevenlabs");
   const [voice, setVoice] = useState("Rachel");
   const [language, setLanguage] = useState("en");
@@ -61,20 +63,28 @@ export function AudioPanel() {
     [models.data],
   );
   const selectedModel = useMemo(
-    () => voiceModels.find((model) => `${model.providerId}/${model.modelId}` === modelKey) ?? voiceModels[0],
+    () =>
+      voiceModels.find((model) => `${model.providerId}/${model.modelId}` === modelKey) ??
+      voiceModels[0],
     [modelKey, voiceModels],
   );
   const capabilities = (selectedModel?.capabilities ?? {}) as Record<string, unknown>;
   const voices = Array.isArray(capabilities["voices"]) ? (capabilities["voices"] as string[]) : [];
-  const languages = Array.isArray(capabilities["languages"]) ? (capabilities["languages"] as string[]) : [];
-  const characterPrice = typeof capabilities["unitPrice"] === "number" ? (capabilities["unitPrice"] as number) : null;
+  const languages = Array.isArray(capabilities["languages"])
+    ? (capabilities["languages"] as string[])
+    : [];
+  const characterPrice =
+    typeof capabilities["unitPrice"] === "number" ? (capabilities["unitPrice"] as number) : null;
 
   const synthesize = (sentence: Sentence, index: number): void => {
     if (!selectedModel) return;
     setBusySentenceId(sentence.id);
     // Real synthesis is a job on the Rust side; here we record the revision and its cost so
     // the revisions list and the budget ledger stay truthful.
-    const estimate = characterPrice === null ? "unknown" : `$${(characterPrice * sentence.text.length).toFixed(4)}`;
+    const estimate =
+      characterPrice === null
+        ? "unknown"
+        : `$${(characterPrice * sentence.text.length).toFixed(4)}`;
     const revision: Revision = {
       id: `rev-${Date.now().toString(36)}-${index}`,
       sentenceId: sentence.id,
@@ -90,10 +100,14 @@ export function AudioPanel() {
     };
     setRevisions((current) => [revision, ...current]);
     setBusySentenceId(null);
-    showToast(`Synthesized sentence ${index + 1} with ${voice} (${selectedModel.modelId}).`, "info");
+    showToast(
+      `Synthesized sentence ${index + 1} with ${voice} (${selectedModel.modelId}).`,
+      "info",
+    );
   };
 
-  const sequence = document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
+  const sequence =
+    document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
 
   return (
     <div className="panel-scroll">
@@ -107,7 +121,8 @@ export function AudioPanel() {
           aria-describedby="narration-sentence-count"
         />
         <span className="small muted" id="narration-sentence-count">
-          {sentences.length} sentence{sentences.length === 1 ? "" : "s"} · {script.length} characters
+          {sentences.length} sentence{sentences.length === 1 ? "" : "s"} · {script.length}{" "}
+          characters
         </span>
       </div>
 
@@ -131,9 +146,17 @@ export function AudioPanel() {
 
         <div className="field">
           <label htmlFor="narration-model">Model</label>
-          <select id="narration-model" className="select" value={modelKey ?? ""} onChange={(event) => setModelKey(event.target.value)}>
+          <select
+            id="narration-model"
+            className="select"
+            value={modelKey ?? ""}
+            onChange={(event) => setModelKey(event.target.value)}
+          >
             {voiceModels.map((model) => (
-              <option key={`${model.providerId}/${model.modelId}`} value={`${model.providerId}/${model.modelId}`}>
+              <option
+                key={`${model.providerId}/${model.modelId}`}
+                value={`${model.providerId}/${model.modelId}`}
+              >
                 {model.displayName}
               </option>
             ))}
@@ -142,7 +165,12 @@ export function AudioPanel() {
 
         <div className="field">
           <label htmlFor="narration-voice">Voice</label>
-          <select id="narration-voice" className="select" value={voice} onChange={(event) => setVoice(event.target.value)}>
+          <select
+            id="narration-voice"
+            className="select"
+            value={voice}
+            onChange={(event) => setVoice(event.target.value)}
+          >
             {(voices.length > 0 ? voices : ["Rachel", "Adam", "Bella"]).map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -153,7 +181,12 @@ export function AudioPanel() {
 
         <div className="field">
           <label htmlFor="narration-language">Language</label>
-          <select id="narration-language" className="select" value={language} onChange={(event) => setLanguage(event.target.value)}>
+          <select
+            id="narration-language"
+            className="select"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+          >
             {(languages.length > 0 ? languages : ["en"]).map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -166,9 +199,9 @@ export function AudioPanel() {
       <p className="small muted">
         {characterPrice === null
           ? "This model publishes no machine-readable price; the estimate is unavailable rather than assumed to be zero."
-          : `Priced per character at $${characterPrice}. Aspect preset for the sequence: ${ASPECT_PRESETS_LOCAL.find(
-              (preset) => preset.id === "16:9",
-            )?.label}.`}
+          : `Priced per character at $${characterPrice}. Aspect preset for the sequence: ${
+              ASPECT_PRESETS_LOCAL.find((preset) => preset.id === "16:9")?.label
+            }.`}
       </p>
 
       <div className="field">
@@ -186,7 +219,8 @@ export function AudioPanel() {
                     <span className="small">{sentence.text}</span>
                     {latest ? (
                       <span className="small muted mono">
-                        take · {latest.voiceId} · {latest.estimate} · {formatTimestamp(latest.createdAt)}
+                        take · {latest.voiceId} · {latest.estimate} ·{" "}
+                        {formatTimestamp(latest.createdAt)}
                       </span>
                     ) : (
                       <span className="small muted">not synthesized</span>
@@ -223,7 +257,9 @@ export function AudioPanel() {
         <span className="field-label">Revisions ({revisions.length})</span>
         <div className="revision-list">
           {revisions.length === 0 ? (
-            <p className="small muted">Every synthesis is preserved here; nothing is overwritten.</p>
+            <p className="small muted">
+              Every synthesis is preserved here; nothing is overwritten.
+            </p>
           ) : (
             <ul className="list">
               {revisions.map((revision) => (
@@ -243,14 +279,17 @@ export function AudioPanel() {
       </div>
 
       <p className="disclosure">
-        Sending a script to a remote voice provider transmits its text (and any recorded reference clips) to that provider. Nothing is sent
-        while offline, and the project file itself never contains a credential (PRD §13).
+        Sending a script to a remote voice provider transmits its text (and any recorded reference
+        clips) to that provider. Nothing is sent while offline, and the project file itself never
+        contains a credential (PRD §13).
       </p>
 
       <span className="sr-only" role="status" aria-live="polite">
         {busySentenceId ? "Synthesizing a sentence" : `${revisions.length} revisions available`}
       </span>
-      <span className="sr-only">{sequence ? `Active sequence ${sequence.name}` : "No active sequence"}</span>
+      <span className="sr-only">
+        {sequence ? `Active sequence ${sequence.name}` : "No active sequence"}
+      </span>
     </div>
   );
 }

@@ -60,7 +60,12 @@ function makeDocument(overrides: Partial<EditorDocument> = {}): EditorDocument {
   };
 }
 
-function track(id: string, kind: Track["kind"], sortOrder: number, overrides: Partial<Track> = {}): Track {
+function track(
+  id: string,
+  kind: Track["kind"],
+  sortOrder: number,
+  overrides: Partial<Track> = {},
+): Track {
   return {
     id,
     sequenceId: SEQUENCE_ID,
@@ -126,7 +131,9 @@ function asset(overrides: Partial<Asset> & { id: string }): Asset {
 
 describe("clipsAtFrame", () => {
   it("uses a half-open range: the clip end frame belongs to the next clip", () => {
-    const document = makeDocument({ clips: [clip({ id: "clp_a", trackId: "trk_v1", startFrame: 10, durationFrames: 20 })] });
+    const document = makeDocument({
+      clips: [clip({ id: "clp_a", trackId: "trk_v1", startFrame: 10, durationFrames: 20 })],
+    });
     expect(clipsAtFrame(document, 9)).toHaveLength(0);
     expect(clipsAtFrame(document, 10)).toHaveLength(1);
     expect(clipsAtFrame(document, 29)).toHaveLength(1);
@@ -175,14 +182,29 @@ describe("planFrame", () => {
           durationFrames: 60,
           properties: {
             ...DEFAULT_CLIP_PROPERTIES,
-            transform: { x: 120, y: -40, scale: 1.5, rotation: 12, opacity: 0.4, flipX: true, flipY: false },
+            transform: {
+              x: 120,
+              y: -40,
+              scale: 1.5,
+              rotation: 12,
+              opacity: 0.4,
+              flipX: true,
+              flipY: false,
+            },
             crop: { top: 0.1, right: 0.2, bottom: 0.05, left: 0.15 },
           },
         }),
       ],
     });
     const [layer] = planFrame(document, 0).layers;
-    expect(layer!.transform).toEqual({ x: 120, y: -40, scale: 1.5, rotation: 12, flipX: true, flipY: false });
+    expect(layer!.transform).toEqual({
+      x: 120,
+      y: -40,
+      scale: 1.5,
+      rotation: 12,
+      flipX: true,
+      flipY: false,
+    });
     expect(layer!.crop).toEqual({ top: 0.1, right: 0.2, bottom: 0.05, left: 0.15 });
     expect(layer!.opacity).toBe(0.4);
   });
@@ -199,7 +221,9 @@ describe("planFrame", () => {
   });
 
   it("flags a clip with no asset at all", () => {
-    const document = makeDocument({ clips: [clip({ id: "clp_a", trackId: "trk_v1", assetId: null, durationFrames: 10 })] });
+    const document = makeDocument({
+      clips: [clip({ id: "clp_a", trackId: "trk_v1", assetId: null, durationFrames: 10 })],
+    });
     const plan = planFrame(document, 0);
     expect(plan.layers[0]!.missing).toBe(true);
     expect(plan.layers[0]!.mediaType).toBe("placeholder");
@@ -226,7 +250,13 @@ describe("planFrame", () => {
 
 describe("sourceSecondsFor", () => {
   it("maps a timeline frame onto the source timecode of the asset", () => {
-    const clipA = clip({ id: "clp_a", trackId: "trk_v1", startFrame: 100, sourceInFrame: 30, durationFrames: 60 });
+    const clipA = clip({
+      id: "clp_a",
+      trackId: "trk_v1",
+      startFrame: 100,
+      sourceInFrame: 30,
+      durationFrames: 60,
+    });
     // 10 frames past the clip start + 30 source frames in = source frame 40 = 1.333s at 30fps.
     expect(sourceSecondsFor(clipA, 110, asset({ id: "ast_a" }), FPS)).toBeCloseTo(40 / 30, 9);
     expect(sourceSecondsFor(clipA, 100, asset({ id: "ast_a" }), FPS)).toBeCloseTo(1, 9);
@@ -246,7 +276,13 @@ describe("sourceSecondsFor", () => {
   });
 
   it("clamps to the last frame the asset actually has", () => {
-    const long = clip({ id: "clp_l", trackId: "trk_v1", startFrame: 0, sourceInFrame: 0, durationFrames: 600 });
+    const long = clip({
+      id: "clp_l",
+      trackId: "trk_v1",
+      startFrame: 0,
+      sourceInFrame: 0,
+      durationFrames: 600,
+    });
     const short = asset({ id: "ast_short", durationFrames: 45 });
     const seconds = sourceSecondsFor(long, 500, short, FPS);
     // Never ask the decoder for frame 500 of a 45-frame asset.
@@ -270,14 +306,20 @@ describe("audibleTracksAtFrame", () => {
 
   it("honours mute", () => {
     const document = withAudio();
-    document.tracks = document.tracks.map((entry) => (entry.id === "trk_a1" ? { ...entry, muted: true } : entry));
+    document.tracks = document.tracks.map((entry) =>
+      entry.id === "trk_a1" ? { ...entry, muted: true } : entry,
+    );
     expect(audibleTracksAtFrame(document, 10).map((entry) => entry.id)).toEqual(["trk_a2"]);
   });
 
   it("solo silences every other audio track, including muted ones", () => {
     const document = withAudio();
     document.tracks = document.tracks.map((entry) =>
-      entry.id === "trk_a2" ? { ...entry, solo: true } : entry.id === "trk_a1" ? { ...entry, muted: true } : entry,
+      entry.id === "trk_a2"
+        ? { ...entry, solo: true }
+        : entry.id === "trk_a1"
+          ? { ...entry, muted: true }
+          : entry,
     );
     expect(audibleTracksAtFrame(document, 10).map((entry) => entry.id)).toEqual(["trk_a2"]);
   });

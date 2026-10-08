@@ -30,7 +30,10 @@ export function ProjectsPanel() {
       loadDocument(session.document as never, session.workspacePath);
       showToast(`Opened ${path}`, "info");
     } catch (error) {
-      showToast(`Could not open ${path}: ${error instanceof Error ? error.message : String(error)}`, "error");
+      showToast(
+        `Could not open ${path}: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   };
 
@@ -38,7 +41,9 @@ export function ProjectsPanel() {
     if (!workspacePath) return;
     setPackaging(true);
     try {
-      const dialog = await getBridge().dialogSaveFile({ defaultPath: `${workspacePath}/exports/project-package.zip` });
+      const dialog = await getBridge().dialogSaveFile({
+        defaultPath: `${workspacePath}/exports/project-package.zip`,
+      });
       if (dialog.canceled || dialog.paths.length === 0) {
         showToast("Packaging canceled.", "info");
         return;
@@ -46,12 +51,17 @@ export function ProjectsPanel() {
       const response = await getBridge().projectPackage({ destinationPath: dialog.paths[0]! });
       showToast(
         `Packaged ${response.files} files (${formatBytes(response.bytes)})${
-          response.portable ? "" : ` — ${response.unresolved.length} linked asset(s) could not be made portable`
+          response.portable
+            ? ""
+            : ` — ${response.unresolved.length} linked asset(s) could not be made portable`
         }.`,
         response.portable ? "info" : "warn",
       );
     } catch (error) {
-      showToast(`Packaging failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+      showToast(
+        `Packaging failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     } finally {
       setPackaging(false);
     }
@@ -63,7 +73,10 @@ export function ProjectsPanel() {
       const response = await getBridge().projectBackup({ workspacePath, label: "manual" });
       showToast(`Backup written to ${response.destination} (${response.files} files).`, "info");
     } catch (error) {
-      showToast(`Backup failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+      showToast(
+        `Backup failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   };
 
@@ -73,13 +86,28 @@ export function ProjectsPanel() {
   return (
     <div className="panel-scroll">
       <div className="panel-toolbar">
-        <button type="button" className="btn" onClick={() => void openProject(workspacePath ?? "")} disabled={!workspacePath}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => void openProject(workspacePath ?? "")}
+          disabled={!workspacePath}
+        >
           Reopen workspace
         </button>
-        <button type="button" className="btn" onClick={() => void packageProject()} disabled={!workspacePath || packaging}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => void packageProject()}
+          disabled={!workspacePath || packaging}
+        >
           {packaging ? "Packaging…" : "Package project"}
         </button>
-        <button type="button" className="btn" onClick={() => void backup()} disabled={!workspacePath}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => void backup()}
+          disabled={!workspacePath}
+        >
           Backup
         </button>
       </div>
@@ -87,15 +115,23 @@ export function ProjectsPanel() {
       <div className="field">
         <span className="field-label">Recent projects</span>
         {recent.isLoading ? <p className="small muted">Loading…</p> : null}
-        {recent.data && recent.data.length === 0 ? <p className="empty">No recent projects recorded yet.</p> : null}
+        {recent.data && recent.data.length === 0 ? (
+          <p className="empty">No recent projects recorded yet.</p>
+        ) : null}
         <ul className="list">
           {(recent.data ?? []).map((project) => (
             <li className="list__item" key={`${project.id}-${project.workspacePath}`}>
-              <button type="button" className="btn btn--ghost" onClick={() => void openProject(project.workspacePath)}>
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={() => void openProject(project.workspacePath)}
+              >
                 {project.title}
               </button>
               <div className="spacer" />
-              {project.hasMissingMedia ? <span className="badge badge--danger">missing media</span> : null}
+              {project.hasMissingMedia ? (
+                <span className="badge badge--danger">missing media</span>
+              ) : null}
               <span className="small muted">{formatTimestamp(project.updatedAt)}</span>
             </li>
           ))}
@@ -107,34 +143,40 @@ export function ProjectsPanel() {
         {usage.isLoading ? <p className="small muted">Measuring the workspace…</p> : null}
         {usage.data ? (
           <>
-            <div className="storage-bar" role="img" aria-label={`Workspace usage: ${formatBytes(total)} total`}>
-              {(usage.data.directories.length > 0 ? usage.data.directories : [{ path: "workspace", bytes: total, files: 0 }]).map(
-                (directory, index) => (
-                  <span
-                    key={directory.path}
-                    className="storage-bar__seg"
-                    style={{
-                      width: `${total > 0 ? Math.max(2, (directory.bytes / total) * 100) : 100}%`,
-                      background: SEGMENT_COLOURS[index % SEGMENT_COLOURS.length],
-                    }}
-                    title={`${directory.path} · ${formatBytes(directory.bytes)}`}
-                  />
-                ),
-              )}
+            <div
+              className="storage-bar"
+              role="img"
+              aria-label={`Workspace usage: ${formatBytes(total)} total`}
+            >
+              {(usage.data.directories.length > 0
+                ? usage.data.directories
+                : [{ path: "workspace", bytes: total, files: 0 }]
+              ).map((directory, index) => (
+                <span
+                  key={directory.path}
+                  className="storage-bar__seg"
+                  style={{
+                    width: `${total > 0 ? Math.max(2, (directory.bytes / total) * 100) : 100}%`,
+                    background: SEGMENT_COLOURS[index % SEGMENT_COLOURS.length],
+                  }}
+                  title={`${directory.path} · ${formatBytes(directory.bytes)}`}
+                />
+              ))}
             </div>
             <div className="storage-legend">
-              {(usage.data.directories.length > 0 ? usage.data.directories : [{ path: "workspace", bytes: total, files: 0 }]).map(
-                (directory, index) => (
-                  <span key={directory.path}>
-                    <span
-                      className="storage-legend__swatch"
-                      style={{ background: SEGMENT_COLOURS[index % SEGMENT_COLOURS.length] }}
-                      aria-hidden="true"
-                    />
-                    {directory.path} · {formatBytes(directory.bytes)} ({directory.files} files)
-                  </span>
-                ),
-              )}
+              {(usage.data.directories.length > 0
+                ? usage.data.directories
+                : [{ path: "workspace", bytes: total, files: 0 }]
+              ).map((directory, index) => (
+                <span key={directory.path}>
+                  <span
+                    className="storage-legend__swatch"
+                    style={{ background: SEGMENT_COLOURS[index % SEGMENT_COLOURS.length] }}
+                    aria-hidden="true"
+                  />
+                  {directory.path} · {formatBytes(directory.bytes)} ({directory.files} files)
+                </span>
+              ))}
             </div>
             <dl className="provenance-grid">
               <dt>Total</dt>
@@ -156,23 +198,31 @@ export function ProjectsPanel() {
                 onClick={() =>
                   void purge
                     .mutateAsync()
-                    .then((response) => showToast(`Cleaned ${response.purged.length} cache directories.`, "info"))
+                    .then((response) =>
+                      showToast(`Cleaned ${response.purged.length} cache directories.`, "info"),
+                    )
                     .catch((error: unknown) =>
-                      showToast(`Cleanup failed: ${error instanceof Error ? error.message : String(error)}`, "error"),
+                      showToast(
+                        `Cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
+                        "error",
+                      ),
                     )
                 }
               >
                 {purge.isPending ? "Cleaning…" : `Clean cache (${formatBytes(cacheReclaimable)})`}
               </button>
-              <span className="small muted">Caches are rebuildable; originals and exports are never touched.</span>
+              <span className="small muted">
+                Caches are rebuildable; originals and exports are never touched.
+              </span>
             </div>
           </>
         ) : null}
       </div>
 
       <p className="small muted">
-        Packaging copies every dependency and validates relinking; linked originals outside the workspace cannot be made portable, and the
-        result says so explicitly rather than failing silently (PRD §11).
+        Packaging copies every dependency and validates relinking; linked originals outside the
+        workspace cannot be made portable, and the result says so explicitly rather than failing
+        silently (PRD §11).
       </p>
     </div>
   );

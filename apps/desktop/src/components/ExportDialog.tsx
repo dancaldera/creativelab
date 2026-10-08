@@ -34,12 +34,18 @@ export function ExportDialog() {
 
   if (!exportOpen) return null;
 
-  const preset = EXPORT_PRESETS_LOCAL.find((candidate) => candidate.id === presetId) ?? EXPORT_PRESETS_LOCAL[0]!;
-  const sequence = document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
-  const terminal = status.data ? ["completed", "failed", "canceled"].includes(status.data.status) : false;
+  const preset =
+    EXPORT_PRESETS_LOCAL.find((candidate) => candidate.id === presetId) ?? EXPORT_PRESETS_LOCAL[0]!;
+  const sequence =
+    document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
+  const terminal = status.data
+    ? ["completed", "failed", "canceled"].includes(status.data.status)
+    : false;
 
   const chooseOutput = async (): Promise<void> => {
-    const suggested = workspacePath ? `${workspacePath}/exports/${document.project.title.replace(/[^\w.-]+/g, "-") || "export"}-${preset.id}.mp4` : "export.mp4";
+    const suggested = workspacePath
+      ? `${workspacePath}/exports/${document.project.title.replace(/[^\w.-]+/g, "-") || "export"}-${preset.id}.mp4`
+      : "export.mp4";
     const dialog = await getBridge().dialogSaveFile({
       defaultPath: suggested,
       filters: [{ name: "MP4 video", extensions: ["mp4"] }],
@@ -123,7 +129,12 @@ export function ExportDialog() {
       <div className="dialog dialog--wide">
         <div className="dialog__header">
           <h2 className="dialog__title">Export</h2>
-          <button type="button" className="btn" onClick={() => setExportOpen(false)} aria-label="Close the export dialog">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setExportOpen(false)}
+            aria-label="Close the export dialog"
+          >
             Close
           </button>
         </div>
@@ -143,7 +154,9 @@ export function ExportDialog() {
                 >
                   <span>{option.label}</span>
                   <span className="small muted mono">
-                    {option.width}×{option.height} · {option.crf === null ? `${option.videoBitrateKbps} kbps` : `CRF ${option.crf}`} · H.264/AAC
+                    {option.width}×{option.height} ·{" "}
+                    {option.crf === null ? `${option.videoBitrateKbps} kbps` : `CRF ${option.crf}`}{" "}
+                    · H.264/AAC
                   </span>
                 </button>
               ))}
@@ -174,8 +187,8 @@ export function ExportDialog() {
               Burn in captions (uses the caption track at render time)
             </label>
             <p className="small muted">
-              Export always renders from the originals at project settings, never from the preview proxies (PRD §12). Temp output is
-              written and atomically renamed on success.
+              Export always renders from the originals at project settings, never from the preview
+              proxies (PRD §12). Temp output is written and atomically renamed on success.
             </p>
           </section>
 
@@ -216,10 +229,24 @@ export function ExportDialog() {
         </div>
 
         <div className="dialog__footer">
-          <button type="button" className="btn btn--primary" onClick={() => void start()} disabled={starting || (exportJobId !== null && !terminal)}>
-            {starting ? "Starting…" : exportJobId !== null && !terminal ? "Rendering…" : "Start render"}
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => void start()}
+            disabled={starting || (exportJobId !== null && !terminal)}
+          >
+            {starting
+              ? "Starting…"
+              : exportJobId !== null && !terminal
+                ? "Rendering…"
+                : "Start render"}
           </button>
-          <button type="button" className="btn btn--danger" onClick={() => void cancel()} disabled={exportJobId === null || terminal}>
+          <button
+            type="button"
+            className="btn btn--danger"
+            onClick={() => void cancel()}
+            disabled={exportJobId === null || terminal}
+          >
             Cancel render
           </button>
           <div className="spacer" />

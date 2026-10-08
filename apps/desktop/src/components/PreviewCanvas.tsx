@@ -48,7 +48,10 @@ export function PreviewCanvas({ showSafeAreas = true }: PreviewCanvasProps) {
     if (!element) return undefined;
     const measure = (): void => {
       const rect = element.getBoundingClientRect();
-      setStageSize({ width: Math.max(160, rect.width - 28), height: Math.max(120, rect.height - 28) });
+      setStageSize({
+        width: Math.max(160, rect.width - 28),
+        height: Math.max(120, rect.height - 28),
+      });
     };
     measure();
     if (typeof ResizeObserver === "undefined") {
@@ -177,7 +180,9 @@ export function PreviewCanvas({ showSafeAreas = true }: PreviewCanvasProps) {
   );
 
   const qualityBadge = useMemo(() => {
-    const heavy = document.assets.some((asset) => (asset.width ?? 0) >= 3000 || (asset.height ?? 0) >= 3000);
+    const heavy = document.assets.some(
+      (asset) => (asset.width ?? 0) >= 3000 || (asset.height ?? 0) >= 3000,
+    );
     return heavy ? "Proxy: available" : "Full quality";
   }, [document.assets]);
 
@@ -262,10 +267,20 @@ export function PreviewCanvas({ showSafeAreas = true }: PreviewCanvasProps) {
           >
             ▶▶
           </button>
-          <button type="button" className="btn btn--icon" aria-label="Step forward one frame" onClick={() => setPlayhead(playheadFrame + 1)}>
+          <button
+            type="button"
+            className="btn btn--icon"
+            aria-label="Step forward one frame"
+            onClick={() => setPlayhead(playheadFrame + 1)}
+          >
             |▶
           </button>
-          <button type="button" className="btn btn--icon" aria-label="Stop (K)" onClick={() => setPlaying(false, 0)}>
+          <button
+            type="button"
+            className="btn btn--icon"
+            aria-label="Stop (K)"
+            onClick={() => setPlaying(false, 0)}
+          >
             ■
           </button>
         </div>
@@ -327,7 +342,10 @@ function paintLayer(context: CanvasRenderingContext2D, input: PaintLayerInput): 
   context.translate(canvasWidth / 2 + layer.transform.x, canvasHeight / 2 + layer.transform.y);
   context.rotate((layer.transform.rotation * Math.PI) / 180);
   // A non-uniform stage scale keeps the composition undistorted.
-  context.scale(layer.transform.flipX ? -layer.transform.scale : layer.transform.scale, layer.transform.flipY ? -layer.transform.scale : layer.transform.scale);
+  context.scale(
+    layer.transform.flipX ? -layer.transform.scale : layer.transform.scale,
+    layer.transform.flipY ? -layer.transform.scale : layer.transform.scale,
+  );
 
   const crop = layer.crop;
   const left = -canvasWidth / 2 + crop.left * canvasWidth;
@@ -390,7 +408,11 @@ function paintLayer(context: CanvasRenderingContext2D, input: PaintLayerInput): 
   context.fillStyle = "#eef2f8";
   context.font = "600 11px ui-monospace, Menlo, monospace";
   const sourceSeconds = sourceSecondsFor(clip, frame, asset, fps);
-  context.fillText(`${layer.label.slice(0, 18)} · ${sourceSeconds.toFixed(2)}s`, left + 12, top + 20);
+  context.fillText(
+    `${layer.label.slice(0, 18)} · ${sourceSeconds.toFixed(2)}s`,
+    left + 12,
+    top + 20,
+  );
 
   context.restore();
 }
@@ -438,7 +460,11 @@ function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: num
 }
 
 /** Example consumer of the shared thumbnail query, used by the inspector's reference row. */
-export function useAssetThumbnail(asset: Asset | undefined, workspacePath: string | null, atSeconds = 0) {
+export function useAssetThumbnail(
+  asset: Asset | undefined,
+  workspacePath: string | null,
+  atSeconds = 0,
+) {
   return useThumbnail(
     asset && workspacePath ? { workspacePath, assetId: asset.id, atSeconds, width: 160 } : null,
   );

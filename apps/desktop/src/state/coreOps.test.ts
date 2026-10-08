@@ -156,7 +156,12 @@ describe("activeSequence (a genuine renderer adaptation)", () => {
   it("prefers the flagged sequence", () => {
     const document = makeDocument();
     const first = { ...document.sequences[0]!, isActive: false };
-    const second = { ...document.sequences[0]!, id: "seq_second000000000000001", name: "Second", isActive: true };
+    const second = {
+      ...document.sequences[0]!,
+      id: "seq_second000000000000001",
+      name: "Second",
+      isActive: true,
+    };
     expect(ops.activeSequence({ ...document, sequences: [first, second] })?.id).toBe(second.id);
   });
 
@@ -215,7 +220,10 @@ describe("the editor and the renderer agree on clip geometry", () => {
     const trimmed = ops.trimClip(split.clips, split.rightId, "end", 70);
     expect(trimmed.find((candidate) => candidate.id === split.rightId)!.durationFrames).toBe(30);
 
-    const moved = ops.moveClip(trimmed, document.tracks, { clipId: split.rightId, toStartFrame: 200 });
+    const moved = ops.moveClip(trimmed, document.tracks, {
+      clipId: split.rightId,
+      toStartFrame: 200,
+    });
     expect(moved.find((candidate) => candidate.id === split.rightId)!.startFrame).toBe(200);
     expect(ops.detectOverlaps(moved)).toHaveLength(0);
   });

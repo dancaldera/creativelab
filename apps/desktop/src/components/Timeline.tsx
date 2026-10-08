@@ -13,7 +13,15 @@
  *     does not re-layout track content.
  *   * Media drops arrive through native drag-and-drop on the lane container.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent as ReactDragEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { Clip, Track, TrackKind } from "@creativelab/core";
 import { clipEnd, clipsOnTrack, frameRateAsNumber, sequenceDurationFrames } from "../state/coreOps";
 import { createClip, defaultTrackFor, placeClip } from "../state/clipFactory";
@@ -79,7 +87,9 @@ export function Timeline() {
   const dragRef = useRef<DragState | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
-  const [trimPreview, setTrimPreview] = useState<{ edge: "start" | "end"; frame: number } | null>(null);
+  const [trimPreview, setTrimPreview] = useState<{ edge: "start" | "end"; frame: number } | null>(
+    null,
+  );
   const [snapLine, setSnapLine] = useState<number | null>(null);
 
   const orderedTracks = useMemo(() => {
@@ -92,10 +102,14 @@ export function Timeline() {
     return [...groups.video, ...groups.audio, ...groups.caption];
   }, [document.tracks]);
 
-  const primarySequence = document.sequences.find((sequence) => sequence.isActive) ?? document.sequences[0];
+  const primarySequence =
+    document.sequences.find((sequence) => sequence.isActive) ?? document.sequences[0];
   const fps = primarySequence?.fps ?? document.project.fps;
   const durationFrames = sequenceDurationFrames(document.clips);
-  const contentFrames = Math.max(durationFrames + Math.round(frameRateAsNumber(fps) * 4), Math.round(frameRateAsNumber(fps) * 12));
+  const contentFrames = Math.max(
+    durationFrames + Math.round(frameRateAsNumber(fps) * 4),
+    Math.round(frameRateAsNumber(fps) * 12),
+  );
   const contentWidth = Math.max(320, Math.ceil(contentFrames * zoom));
   const lanesHeight = Math.max(1, orderedTracks.length * LANE_HEIGHT);
 
@@ -223,7 +237,9 @@ export function Timeline() {
         const frame = frameForClientX(event.clientX);
         if (current.kind === "move") {
           const proposed = Math.max(0, frame - current.grabOffsetFrames);
-          const snapped = snapEnabled ? snappingMove(current.clipId, proposed, current.targetTrackId) : proposed;
+          const snapped = snapEnabled
+            ? snappingMove(current.clipId, proposed, current.targetTrackId)
+            : proposed;
           const updated: DragState = {
             ...current,
             targetStart: Math.max(0, snapped),
@@ -255,7 +271,10 @@ export function Timeline() {
     (current: DragState | null) => {
       if (!current || !current.moved) return;
       if (current.kind === "move") {
-        if (current.targetStart !== current.originStart || current.targetTrackId !== current.originTrackId) {
+        if (
+          current.targetStart !== current.originStart ||
+          current.targetTrackId !== current.originTrackId
+        ) {
           moveClip(current.clipId, current.targetStart, {
             toTrackId: current.targetTrackId,
             mode: useEditorStore.getState().editMode,
@@ -265,10 +284,15 @@ export function Timeline() {
         }
         return;
       }
-      const clip = useEditorStore.getState().document.clips.find((candidate) => candidate.id === current.clipId);
+      const clip = useEditorStore
+        .getState()
+        .document.clips.find((candidate) => candidate.id === current.clipId);
       if (!clip) return;
       const edge = current.edge ?? "end";
-      const unchanged = edge === "start" ? current.targetStart === clip.startFrame : current.targetStart === clipEnd(clip);
+      const unchanged =
+        edge === "start"
+          ? current.targetStart === clip.startFrame
+          : current.targetStart === clipEnd(clip);
       if (unchanged) return;
       trimClipEdge(current.clipId, edge, current.targetStart, { coalesce: false });
     },
@@ -287,9 +311,14 @@ export function Timeline() {
       const endFrame = Math.ceil(right / zoom);
       const firstLane = Math.max(0, Math.floor(top / LANE_HEIGHT));
       const lastLane = Math.floor(bottom / LANE_HEIGHT);
-      const laneIds = new Set(orderedTracks.slice(firstLane, lastLane + 1).map((track) => track.id));
+      const laneIds = new Set(
+        orderedTracks.slice(firstLane, lastLane + 1).map((track) => track.id),
+      );
       const hits = document.clips
-        .filter((clip) => laneIds.has(clip.trackId) && clip.startFrame < endFrame && clipEnd(clip) > startFrame)
+        .filter(
+          (clip) =>
+            laneIds.has(clip.trackId) && clip.startFrame < endFrame && clipEnd(clip) > startFrame,
+        )
         .map((clip) => clip.id);
       selectClips(hits, additive);
     },
@@ -343,7 +372,8 @@ export function Timeline() {
 
   const onLaneDrop = useCallback(
     (event: ReactDragEvent<HTMLDivElement>) => {
-      const assetId = event.dataTransfer.getData(ASSET_DRAG_MIME) || event.dataTransfer.getData("text/plain");
+      const assetId =
+        event.dataTransfer.getData(ASSET_DRAG_MIME) || event.dataTransfer.getData("text/plain");
       if (!assetId) return;
       event.preventDefault();
       insertAssetAt(assetId, frameForClientX(event.clientX), trackIdForClientY(event.clientY), fps);
@@ -358,7 +388,12 @@ export function Timeline() {
     <section className="timeline" aria-label="Timeline">
       <div className="timeline__bar">
         <div className="row" role="group" aria-label="Timeline zoom">
-          <button type="button" className="btn btn--icon" aria-label="Zoom out (-)" onClick={() => zoomBy(0.8)}>
+          <button
+            type="button"
+            className="btn btn--icon"
+            aria-label="Zoom out (-)"
+            onClick={() => zoomBy(0.8)}
+          >
             −
           </button>
           <input
@@ -372,7 +407,12 @@ export function Timeline() {
             aria-valuenow={Number(zoom.toFixed(2))}
             onChange={(event) => setZoom(Number(event.target.value))}
           />
-          <button type="button" className="btn btn--icon" aria-label="Zoom in (+)" onClick={() => zoomBy(1.25)}>
+          <button
+            type="button"
+            className="btn btn--icon"
+            aria-label="Zoom in (+)"
+            onClick={() => zoomBy(1.25)}
+          >
             +
           </button>
           <span className="small muted mono">{zoom.toFixed(2)} px/f</span>
@@ -401,7 +441,13 @@ export function Timeline() {
           ))}
         </div>
 
-        <button type="button" className="chip" aria-pressed={snapEnabled} onClick={toggleSnap} title="Toggle snapping (N)">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={snapEnabled}
+          onClick={toggleSnap}
+          title="Toggle snapping (N)"
+        >
           snap {snapEnabled ? "on" : "off"}
         </button>
 
@@ -421,10 +467,21 @@ export function Timeline() {
 
         <div className="spacer" />
 
-        <button type="button" className="btn" onClick={splitAtPlayhead} title="Split at playhead (S)">
+        <button
+          type="button"
+          className="btn"
+          onClick={splitAtPlayhead}
+          title="Split at playhead (S)"
+        >
           Split (S)
         </button>
-        <button type="button" className="btn" onClick={() => closeGaps(topTrackId)} disabled={!topTrackId} title="Pack clips left on the top track">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => closeGaps(topTrackId)}
+          disabled={!topTrackId}
+          title="Pack clips left on the top track"
+        >
           Close gaps
         </button>
         <span className="badge" aria-live="polite">
@@ -441,11 +498,16 @@ export function Timeline() {
                 key={track.id}
                 track={track}
                 height={LANE_HEIGHT}
-                selected={selection.size > 0 && clipsOnTrack(document.clips, track.id).some((clip) => selection.has(clip.id))}
+                selected={
+                  selection.size > 0 &&
+                  clipsOnTrack(document.clips, track.id).some((clip) => selection.has(clip.id))
+                }
                 clipCount={clipsOnTrack(document.clips, track.id).length}
                 onSelect={() => undefined}
                 onUpdate={(patch, options) => updateTrack(track.id, patch, options)}
-                onRename={(name) => updateTrack(track.id, { name: name || track.name }, { coalesce: true })}
+                onRename={(name) =>
+                  updateTrack(track.id, { name: name || track.name }, { coalesce: true })
+                }
                 onReorder={(direction) => reorderTrack(track.id, direction)}
                 onRemove={() => removeTrack(track.id)}
               />
@@ -470,14 +532,18 @@ export function Timeline() {
               onScrub={setPlayhead}
             />
 
-            {orderedTracks.length === 0 ? <p className="timeline__empty">No tracks yet. Add a video track to begin.</p> : null}
+            {orderedTracks.length === 0 ? (
+              <p className="timeline__empty">No tracks yet. Add a video track to begin.</p>
+            ) : null}
 
             <div className="timeline__tracks" style={{ height: lanesHeight }}>
               {orderedTracks.map((track) => (
                 <div
                   key={track.id}
                   className={`track-lane${track.locked ? " track-lane--locked" : ""}${
-                    drag?.kind === "move" && drag.targetTrackId === track.id && drag.targetTrackId !== drag.originTrackId
+                    drag?.kind === "move" &&
+                    drag.targetTrackId === track.id &&
+                    drag.targetTrackId !== drag.originTrackId
                       ? " track-lane--drop-target"
                       : ""
                   }`}
@@ -487,12 +553,22 @@ export function Timeline() {
                 >
                   {clipsOnTrack(document.clips, track.id).map((clip) => {
                     const isActiveDrag = drag?.clipId === clip.id;
-                    const delta = isActiveDrag && drag.kind === "move" ? (drag.targetStart - drag.originStart) * zoom : 0;
+                    const delta =
+                      isActiveDrag && drag.kind === "move"
+                        ? (drag.targetStart - drag.originStart) * zoom
+                        : 0;
                     const trimming = trimPreview !== null && isActiveDrag;
                     const effectiveClip: Clip = trimming
                       ? trimPreview.edge === "start"
-                        ? { ...clip, startFrame: trimPreview.frame, durationFrames: Math.max(1, clipEnd(clip) - trimPreview.frame) }
-                        : { ...clip, durationFrames: Math.max(1, trimPreview.frame - clip.startFrame) }
+                        ? {
+                            ...clip,
+                            startFrame: trimPreview.frame,
+                            durationFrames: Math.max(1, clipEnd(clip) - trimPreview.frame),
+                          }
+                        : {
+                            ...clip,
+                            durationFrames: Math.max(1, trimPreview.frame - clip.startFrame),
+                          }
                       : clip;
                     return (
                       <div
@@ -512,7 +588,9 @@ export function Timeline() {
                           zoom={zoom}
                           selected={selection.has(clip.id)}
                           dragging={Boolean(isActiveDrag && drag.moved)}
-                          splittable={playheadFrame > clip.startFrame && playheadFrame < clipEnd(clip)}
+                          splittable={
+                            playheadFrame > clip.startFrame && playheadFrame < clipEnd(clip)
+                          }
                           workspacePath={workspacePath}
                           onPointerDownBody={onClipPointerDown}
                           onPointerDownHandle={onHandlePointerDown}
@@ -524,7 +602,9 @@ export function Timeline() {
                 </div>
               ))}
 
-              {snapLine !== null ? <div className="snap-line" style={{ left: snapLine * zoom }} aria-hidden="true" /> : null}
+              {snapLine !== null ? (
+                <div className="snap-line" style={{ left: snapLine * zoom }} aria-hidden="true" />
+              ) : null}
 
               {marquee !== null ? (
                 <div
@@ -540,7 +620,13 @@ export function Timeline() {
             </div>
 
             {/* One playhead element moved by transform: scrubbing never re-lays-out lanes. */}
-            <div className="playhead" style={{ transform: `translateX(${playheadX}px)`, height: lanesHeight + RULER_HEIGHT }}>
+            <div
+              className="playhead"
+              style={{
+                transform: `translateX(${playheadX}px)`,
+                height: lanesHeight + RULER_HEIGHT,
+              }}
+            >
               <span className="playhead__head" />
             </div>
 
@@ -587,7 +673,8 @@ export function insertAssetAt(
     state.setError(`Unknown asset ${assetId}`);
     return;
   }
-  const kind: TrackKind = asset.mediaType === "audio" ? "audio" : asset.mediaType === "subtitle" ? "caption" : "video";
+  const kind: TrackKind =
+    asset.mediaType === "audio" ? "audio" : asset.mediaType === "subtitle" ? "caption" : "video";
   const track = defaultTrackFor(state.document, kind, trackId);
   if (!track) {
     state.setError(`No unlocked ${kind} track is available for this asset.`);
@@ -620,7 +707,11 @@ interface ClipViewWithMediaProps {
   splittable: boolean;
   workspacePath: string | null;
   onPointerDownBody: (event: ReactPointerEvent<HTMLElement>, clipId: string) => void;
-  onPointerDownHandle: (event: ReactPointerEvent<HTMLElement>, clipId: string, edge: "start" | "end") => void;
+  onPointerDownHandle: (
+    event: ReactPointerEvent<HTMLElement>,
+    clipId: string,
+    edge: "start" | "end",
+  ) => void;
   onSplitHere: (clipId: string) => void;
 }
 
@@ -629,11 +720,15 @@ interface ClipViewWithMediaProps {
  * memoized `ClipView`, keeping the query hooks in one place and `ClipView` presentational.
  */
 function ClipViewWithMedia(props: ClipViewWithMediaProps) {
-  const asset = useEditorStore((state) => state.document.assets.find((candidate) => candidate.id === props.assetId));
+  const asset = useEditorStore((state) =>
+    state.document.assets.find((candidate) => candidate.id === props.assetId),
+  );
   const { clip, workspacePath, trackKind } = props;
 
   const thumbnailQuery = useThumbnail(
-    workspacePath && asset && trackKind !== "audio" ? { workspacePath, assetId: asset.id, atSeconds: 0, width: 160 } : null,
+    workspacePath && asset && trackKind !== "audio"
+      ? { workspacePath, assetId: asset.id, atSeconds: 0, width: 160 }
+      : null,
   );
   const waveformQuery = useWaveform(
     workspacePath && asset && (trackKind === "audio" || asset.mediaType === "audio")
@@ -666,7 +761,10 @@ function ClipViewWithMedia(props: ClipViewWithMediaProps) {
 /** The `dataTransfer` contract the Media panel writes and the timeline reads. */
 export const ASSET_DRAG_MIME = "application/x-creativelab-asset";
 
-export function writeAssetDragPayload(event: { dataTransfer: DataTransfer }, assetId: string): void {
+export function writeAssetDragPayload(
+  event: { dataTransfer: DataTransfer },
+  assetId: string,
+): void {
   event.dataTransfer.setData(ASSET_DRAG_MIME, assetId);
   event.dataTransfer.setData("text/plain", assetId);
   event.dataTransfer.effectAllowed = "copy";

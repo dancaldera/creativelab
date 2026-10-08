@@ -12,7 +12,10 @@ const TIMECODE_PATTERN = /^(\d{1,3}):([0-5]?\d):([0-5]?\d)([:;.])(\d{1,3})$/;
  * A caption timing field is edited character by character, so transient invalid input is
  * normal and must not crash the panel; the field simply keeps its last valid value.
  */
-export function parseTimecodeSafe(timecode: string, fps: { num: number; den: number }): number | null {
+export function parseTimecodeSafe(
+  timecode: string,
+  fps: { num: number; den: number },
+): number | null {
   const match = TIMECODE_PATTERN.exec(timecode.trim());
   if (!match) return null;
   const [, hh, mm, ss, , ff] = match as unknown as [string, string, string, string, string, string];
@@ -32,7 +35,8 @@ export function formatShortSeconds(seconds: number): string {
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor(total / 60) % 60;
   const rest = total % 60;
-  if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
+  if (hours > 0)
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 

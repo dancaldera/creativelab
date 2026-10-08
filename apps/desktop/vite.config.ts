@@ -11,7 +11,9 @@ export default defineConfig({
     alias: {
       // The webview must resolve core's *isomorphic* entry point: the main barrel
       // re-exports node:fs/node:sqlite modules that cannot be bundled for a browser.
-      "@creativelab/core": fileURLToPath(new URL("../../packages/core/src/browser.ts", import.meta.url)),
+      "@creativelab/core": fileURLToPath(
+        new URL("../../packages/core/src/browser.ts", import.meta.url),
+      ),
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },

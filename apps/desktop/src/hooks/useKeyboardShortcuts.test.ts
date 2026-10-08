@@ -156,7 +156,9 @@ describe("resolveShortcut: typing targets", () => {
 
   it("lets Escape through from a text field so the user can always escape", () => {
     expect(resolveShortcut({ key: "Escape", target: INPUT })).toEqual({ type: "clear-selection" });
-    expect(resolveShortcut({ key: "Escape", target: CONTENTEDITABLE })).toEqual({ type: "clear-selection" });
+    expect(resolveShortcut({ key: "Escape", target: CONTENTEDITABLE })).toEqual({
+      type: "clear-selection",
+    });
   });
 });
 

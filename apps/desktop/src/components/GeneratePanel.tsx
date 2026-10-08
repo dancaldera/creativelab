@@ -60,25 +60,40 @@ export function GeneratePanel() {
   );
 
   const selected: ProviderModelDto | undefined = useMemo(
-    () => candidates.find((model) => `${model.providerId}/${model.modelId}` === modelKey) ?? candidates[0],
+    () =>
+      candidates.find((model) => `${model.providerId}/${model.modelId}` === modelKey) ??
+      candidates[0],
     [candidates, modelKey],
   );
 
   const capabilities = (selected?.capabilities ?? {}) as Record<string, unknown>;
   const supportsNegative = capabilities["supportsNegativePrompt"] === true;
   const supportsSeed = capabilities["supportsSeed"] === true;
-  const referenceMode = typeof capabilities["referenceFrame"] === "string" ? (capabilities["referenceFrame"] as string) : "none";
-  const aspectOptions = Array.isArray(capabilities["aspectRatios"]) ? (capabilities["aspectRatios"] as string[]) : [];
-  const durationMin = typeof capabilities["durationMinSeconds"] === "number" ? (capabilities["durationMinSeconds"] as number) : null;
-  const durationMax = typeof capabilities["durationMaxSeconds"] === "number" ? (capabilities["durationMaxSeconds"] as number) : null;
+  const referenceMode =
+    typeof capabilities["referenceFrame"] === "string"
+      ? (capabilities["referenceFrame"] as string)
+      : "none";
+  const aspectOptions = Array.isArray(capabilities["aspectRatios"])
+    ? (capabilities["aspectRatios"] as string[])
+    : [];
+  const durationMin =
+    typeof capabilities["durationMinSeconds"] === "number"
+      ? (capabilities["durationMinSeconds"] as number)
+      : null;
+  const durationMax =
+    typeof capabilities["durationMaxSeconds"] === "number"
+      ? (capabilities["durationMaxSeconds"] as number)
+      : null;
 
   const estimate = useMemo(() => {
     if (!selected) return null;
-    const unitPrice = typeof capabilities["unitPrice"] === "number" ? (capabilities["unitPrice"] as number) : null;
+    const unitPrice =
+      typeof capabilities["unitPrice"] === "number" ? (capabilities["unitPrice"] as number) : null;
     if (unitPrice === null) return null;
-    const unit = typeof (capabilities["pricing"] as Record<string, unknown> | null)?.["unit"] === "string"
-      ? String((capabilities["pricing"] as Record<string, unknown>)["unit"])
-      : "job";
+    const unit =
+      typeof (capabilities["pricing"] as Record<string, unknown> | null)?.["unit"] === "string"
+        ? String((capabilities["pricing"] as Record<string, unknown>)["unit"])
+        : "job";
     let amount = unitPrice;
     if (unit === "second") amount = unitPrice * durationSeconds;
     else if (unit === "character") amount = unitPrice * Math.max(1, prompt.length);
@@ -88,7 +103,8 @@ export function GeneratePanel() {
   const policy = DEFAULT_BUDGET_POLICY_LOCAL;
   const todaySpend = spendToday(policy.currency);
   const decision = evaluateBudget(policy, estimate, todaySpend);
-  const needsApproval = decision.allowed && decision.requiresApproval && approvedCost !== estimate?.amount;
+  const needsApproval =
+    decision.allowed && decision.requiresApproval && approvedCost !== estimate?.amount;
 
   const transferFiles = useMemo(() => {
     const referenced = referenceIds
@@ -175,7 +191,11 @@ export function GeneratePanel() {
           id="generate-prompt"
           className="textarea"
           value={prompt}
-          placeholder={modality === "audio" ? "Describe the sound or write the line to speak…" : "Describe the shot…"}
+          placeholder={
+            modality === "audio"
+              ? "Describe the sound or write the line to speak…"
+              : "Describe the shot…"
+          }
           onChange={(event) => setPrompt(event.target.value)}
         />
       </div>
@@ -194,14 +214,19 @@ export function GeneratePanel() {
         </div>
       ) : (
         <p className="unsupported">
-          This model does not support negative prompts, so the field is hidden rather than silently ignored (PRD §8).
+          This model does not support negative prompts, so the field is hidden rather than silently
+          ignored (PRD §8).
         </p>
       )}
 
       <div className="field">
         <span className="field-label">Compatible models</span>
         {models.isLoading ? <p className="small muted">Loading model catalog…</p> : null}
-        {models.isError ? <p className="small" style={{ color: "var(--danger)" }}>Could not load the catalog.</p> : null}
+        {models.isError ? (
+          <p className="small" style={{ color: "var(--danger)" }}>
+            Could not load the catalog.
+          </p>
+        ) : null}
         {!models.isLoading && candidates.length === 0 ? (
           <p className="empty">No model in the catalog advertises the {modality} modality.</p>
         ) : null}
@@ -209,16 +234,20 @@ export function GeneratePanel() {
           {candidates.map((model) => {
             const key = `${model.providerId}/${model.modelId}`;
             const caps = model.capabilities as Record<string, unknown>;
-            const price = typeof caps["unitPrice"] === "number" ? (caps["unitPrice"] as number) : null;
-            const unit = typeof (caps["pricing"] as Record<string, unknown> | null)?.["unit"] === "string"
-              ? String((caps["pricing"] as Record<string, unknown>)["unit"])
-              : "job";
+            const price =
+              typeof caps["unitPrice"] === "number" ? (caps["unitPrice"] as number) : null;
+            const unit =
+              typeof (caps["pricing"] as Record<string, unknown> | null)?.["unit"] === "string"
+                ? String((caps["pricing"] as Record<string, unknown>)["unit"])
+                : "job";
             return (
               <button
                 key={key}
                 type="button"
                 className="model-option"
-                aria-pressed={selected ? key === `${selected.providerId}/${selected.modelId}` : false}
+                aria-pressed={
+                  selected ? key === `${selected.providerId}/${selected.modelId}` : false
+                }
                 onClick={() => setModelKey(key)}
               >
                 <span className="model-option__name">{model.displayName}</span>
@@ -231,7 +260,9 @@ export function GeneratePanel() {
           })}
         </div>
         <div className="row">
-          <span className="small muted">Catalog fetched {formatTimestamp(models.data?.fetchedAt)}</span>
+          <span className="small muted">
+            Catalog fetched {formatTimestamp(models.data?.fetchedAt)}
+          </span>
           <div className="spacer" />
           <button
             type="button"
@@ -264,7 +295,8 @@ export function GeneratePanel() {
 
         <div className="field">
           <label htmlFor="generate-duration">
-            Duration (s){durationMin !== null && durationMax !== null ? ` ${durationMin}–${durationMax}` : ""}
+            Duration (s)
+            {durationMin !== null && durationMax !== null ? ` ${durationMin}–${durationMax}` : ""}
           </label>
           <input
             id="generate-duration"
@@ -292,7 +324,12 @@ export function GeneratePanel() {
 
         <div className="field">
           <label htmlFor="generate-quality">Quality</label>
-          <select id="generate-quality" className="select" value={quality} onChange={(event) => setQuality(event.target.value)}>
+          <select
+            id="generate-quality"
+            className="select"
+            value={quality}
+            onChange={(event) => setQuality(event.target.value)}
+          >
             {["draft", "standard", "high"].map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -303,7 +340,9 @@ export function GeneratePanel() {
       </div>
 
       <div className="field">
-        <span className="field-label">References ({referenceMode === "none" ? "unsupported by this model" : referenceMode})</span>
+        <span className="field-label">
+          References ({referenceMode === "none" ? "unsupported by this model" : referenceMode})
+        </span>
         <div className="reference-list">
           {document.assets
             .filter((asset) => asset.mediaType === "image" || asset.mediaType === "video")
@@ -319,14 +358,20 @@ export function GeneratePanel() {
                   disabled={referenceMode === "none"}
                   title={asset.relativePath ?? asset.uri}
                   onClick={() =>
-                    setReferenceIds((current) => (active ? current.filter((id) => id !== asset.id) : [...current, asset.id]))
+                    setReferenceIds((current) =>
+                      active ? current.filter((id) => id !== asset.id) : [...current, asset.id],
+                    )
                   }
                 >
                   {truncate(asset.relativePath?.split("/").pop() ?? asset.id, 18)}
                 </button>
               );
             })}
-          {document.assets.length === 0 ? <span className="small muted">Import or generate an asset to use it as a reference.</span> : null}
+          {document.assets.length === 0 ? (
+            <span className="small muted">
+              Import or generate an asset to use it as a reference.
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -334,13 +379,22 @@ export function GeneratePanel() {
       <div className="cost-row">
         <span>Estimated cost</span>
         <span className="cost-row__amount">
-          {estimate ? formatMoney(estimate) : <span title="The provider publishes no machine-readable pricing">unknown</span>}
+          {estimate ? (
+            formatMoney(estimate)
+          ) : (
+            <span title="The provider publishes no machine-readable pricing">unknown</span>
+          )}
         </span>
       </div>
       <p className="small muted">
         Today: {formatMoney({ amount: todaySpend, currency: policy.currency })} · per-job cap{" "}
-        {policy.maxCostPerJob === null ? "none" : formatMoney({ amount: policy.maxCostPerJob, currency: policy.currency })} · daily ceiling{" "}
-        {policy.dailyCeiling === null ? "none" : formatMoney({ amount: policy.dailyCeiling, currency: policy.currency })}
+        {policy.maxCostPerJob === null
+          ? "none"
+          : formatMoney({ amount: policy.maxCostPerJob, currency: policy.currency })}{" "}
+        · daily ceiling{" "}
+        {policy.dailyCeiling === null
+          ? "none"
+          : formatMoney({ amount: policy.dailyCeiling, currency: policy.currency })}
       </p>
 
       {!decision.allowed ? (
@@ -360,8 +414,12 @@ export function GeneratePanel() {
         <strong>Which files leave this device</strong>
         <ul>
           <li>
-            Prompt text{negativePrompt && supportsNegative ? ", the negative prompt" : ""} and generation parameters are sent to{" "}
-            <code>{selected ? `${selected.providerId} (${selected.modelId})` : "the selected provider"}</code>.
+            Prompt text{negativePrompt && supportsNegative ? ", the negative prompt" : ""} and
+            generation parameters are sent to{" "}
+            <code>
+              {selected ? `${selected.providerId} (${selected.modelId})` : "the selected provider"}
+            </code>
+            .
           </li>
           {transferFiles.length === 0 ? (
             <li>No media files are uploaded: no references are attached to this request.</li>
@@ -373,8 +431,8 @@ export function GeneratePanel() {
             ))
           )}
           <li>
-            The provider may retain inputs and outputs under its own policy; local editing and export never transmit media. Nothing is
-            transmitted while you are offline.
+            The provider may retain inputs and outputs under its own policy; local editing and
+            export never transmit media. Nothing is transmitted while you are offline.
           </li>
         </ul>
       </div>
@@ -383,7 +441,13 @@ export function GeneratePanel() {
         <button
           type="button"
           className="btn btn--primary"
-          disabled={!selected || !decision.allowed || prompt.trim().length === 0 || submitting || needsApproval}
+          disabled={
+            !selected ||
+            !decision.allowed ||
+            prompt.trim().length === 0 ||
+            submitting ||
+            needsApproval
+          }
           onClick={() => void runGenerate()}
         >
           {submitting ? "Submitting…" : "Generate"}
@@ -459,7 +523,9 @@ function recordGeneratedJob(input: RecordedJobInput): { id: string } {
     progress: 0,
     providerJobId: null,
     retryCount: 0,
-    costEstimate: input.estimate ? { amount: input.estimate.amount, currency: input.estimate.currency } : null,
+    costEstimate: input.estimate
+      ? { amount: input.estimate.amount, currency: input.estimate.currency }
+      : null,
     actualCost: null,
     outputAssetIds: [],
     error: null,

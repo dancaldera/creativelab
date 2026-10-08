@@ -26,10 +26,14 @@ export function CaptionsPanel() {
   const [burnIn, setBurnIn] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const sequence = document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
+  const sequence =
+    document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
   const fps = sequence?.fps ?? document.project.fps;
 
-  const captionTracks = useMemo(() => document.tracks.filter((track) => track.kind === "caption"), [document.tracks]);
+  const captionTracks = useMemo(
+    () => document.tracks.filter((track) => track.kind === "caption"),
+    [document.tracks],
+  );
 
   const segments = useMemo(() => {
     const trackIds = new Set(captionTracks.map((track) => track.id));
@@ -46,7 +50,11 @@ export function CaptionsPanel() {
    *     `setClipProperties`, the same single write path the Inspector uses, so a caption and
    *     an inspector edit can never merge differently.
    */
-  const updateSegment = (clip: Clip, patch: { startFrame?: number; durationFrames?: number; text?: string }, coalesce: boolean) => {
+  const updateSegment = (
+    clip: Clip,
+    patch: { startFrame?: number; durationFrames?: number; text?: string },
+    coalesce: boolean,
+  ) => {
     if (patch.text !== undefined) {
       setClipProperties(clip.id, { notes: patch.text }, { coalesce });
       applyEdit(
@@ -54,7 +62,9 @@ export function CaptionsPanel() {
         (current) => ({
           ...current,
           clips: current.clips.map((candidate) =>
-            candidate.id === clip.id ? { ...candidate, label: patch.text ?? candidate.label } : candidate,
+            candidate.id === clip.id
+              ? { ...candidate, label: patch.text ?? candidate.label }
+              : candidate,
           ),
         }),
         { coalesce },
@@ -138,7 +148,12 @@ export function CaptionsPanel() {
   return (
     <div className="panel-scroll">
       <div className="panel-toolbar">
-        <button type="button" className="btn btn--primary" onClick={() => void translate()} disabled={busy}>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={() => void translate()}
+          disabled={busy}
+        >
           {busy ? "Transcribing…" : "Transcribe audio"}
         </button>
         <button type="button" className="btn" onClick={exportSrt} disabled={segments.length === 0}>
@@ -146,7 +161,11 @@ export function CaptionsPanel() {
         </button>
         <div className="spacer" />
         <label className="row small">
-          <input type="checkbox" checked={burnIn} onChange={(event) => setBurnIn(event.target.checked)} />
+          <input
+            type="checkbox"
+            checked={burnIn}
+            onChange={(event) => setBurnIn(event.target.checked)}
+          />
           Burn-in on export
         </label>
       </div>
@@ -161,7 +180,8 @@ export function CaptionsPanel() {
 
       {segments.length === 0 ? (
         <p className="empty">
-          No captions yet. Transcribe audio to create segments; every timing is stored as integer frames, never float seconds.
+          No captions yet. Transcribe audio to create segments; every timing is stored as integer
+          frames, never float seconds.
         </p>
       ) : (
         <div className="list">
@@ -169,7 +189,10 @@ export function CaptionsPanel() {
             const active = playheadFrame >= clip.startFrame && playheadFrame < clipEnd(clip);
             const selected = selection.has(clip.id);
             return (
-              <div className={`caption-segment${active ? " caption-segment--active" : ""}`} key={clip.id}>
+              <div
+                className={`caption-segment${active ? " caption-segment--active" : ""}`}
+                key={clip.id}
+              >
                 <input
                   className="caption-segment__time"
                   value={formatTimecode(clip.startFrame, fps, false)}
@@ -186,7 +209,12 @@ export function CaptionsPanel() {
                   aria-label={`Segment ${index + 1} end timecode`}
                   onChange={(event) => {
                     const frames = parseTimecodeSafe(event.target.value, fps);
-                    if (frames !== null) updateSegment(clip, { durationFrames: Math.max(1, frames - clip.startFrame) }, true);
+                    if (frames !== null)
+                      updateSegment(
+                        clip,
+                        { durationFrames: Math.max(1, frames - clip.startFrame) },
+                        true,
+                      );
                   }}
                 />
                 <input
@@ -205,7 +233,12 @@ export function CaptionsPanel() {
                   >
                     ◎
                   </button>
-                  <button type="button" className="chip" onClick={() => setPlayhead(clip.startFrame)} title="Go to segment">
+                  <button
+                    type="button"
+                    className="chip"
+                    onClick={() => setPlayhead(clip.startFrame)}
+                    title="Go to segment"
+                  >
                     ▸
                   </button>
                 </div>
@@ -218,12 +251,13 @@ export function CaptionsPanel() {
       <div className="field">
         <span className="field-label">Preview of the burn-in</span>
         <p className="callout callout--info">
-          {segments.find((clip) => playheadFrame >= clip.startFrame && playheadFrame < clipEnd(clip))?.label ??
-            "No caption at the playhead."}
+          {segments.find(
+            (clip) => playheadFrame >= clip.startFrame && playheadFrame < clipEnd(clip),
+          )?.label ?? "No caption at the playhead."}
         </p>
         <span className="small muted">
-          Active at frame {playheadFrame} ({framesToSeconds(playheadFrame, fps).toFixed(2)}s) · burn-in currently{" "}
-          {burnIn ? "enabled for the next export" : "off"}
+          Active at frame {playheadFrame} ({framesToSeconds(playheadFrame, fps).toFixed(2)}s) ·
+          burn-in currently {burnIn ? "enabled for the next export" : "off"}
         </span>
       </div>
 

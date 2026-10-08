@@ -41,7 +41,12 @@ describe("createClip", () => {
   it("defaults to an identity transform, unity speed and no transitions", () => {
     const document = baseDocument();
     const track = defaultTrackFor(document, "video")!;
-    const clip = createClip({ trackId: track.id, sequenceId: track.sequenceId, startFrame: 10, durationFrames: 30 });
+    const clip = createClip({
+      trackId: track.id,
+      sequenceId: track.sequenceId,
+      startFrame: 10,
+      durationFrames: 30,
+    });
     expect(clip.properties).toEqual({ ...DEFAULT_CLIP_PROPERTIES, notes: "" });
     expect(clip.version).toBe(1);
     expect(clip.assetId).toBeNull();
@@ -68,7 +73,12 @@ describe("createClip", () => {
   it("rounds fractional geometry to whole frames, never float seconds", () => {
     const document = baseDocument();
     const track = defaultTrackFor(document, "video")!;
-    const clip = createClip({ trackId: track.id, sequenceId: track.sequenceId, startFrame: 10.6, durationFrames: 29.4 });
+    const clip = createClip({
+      trackId: track.id,
+      sequenceId: track.sequenceId,
+      startFrame: 10.6,
+      durationFrames: 29.4,
+    });
     expect(Number.isInteger(clip.startFrame)).toBe(true);
     expect(Number.isInteger(clip.durationFrames)).toBe(true);
     expect(clip.startFrame).toBe(11);
@@ -83,7 +93,9 @@ describe("createClip", () => {
       sequenceId: track.sequenceId,
       startFrame: 0,
       durationFrames: 30,
-      properties: { audio: { gainDb: -4, fadeInFrames: 6, fadeOutFrames: 0, enabled: true, pan: -0.3 } },
+      properties: {
+        audio: { gainDb: -4, fadeInFrames: 6, fadeOutFrames: 0, enabled: true, pan: -0.3 },
+      },
     });
     expect(clip.properties.audio.gainDb).toBe(-4);
     // The override must not drop the other groups.
@@ -101,8 +113,15 @@ describe("defaultTrackFor", () => {
 
   it("skips locked tracks", () => {
     const document = baseDocument();
-    const videoTracks = document.tracks.filter((entry) => entry.kind === "video").sort((a, b) => a.sortOrder - b.sortOrder);
-    const locked = { ...document, tracks: document.tracks.map((entry) => (entry.id === videoTracks[0]!.id ? { ...entry, locked: true } : entry)) };
+    const videoTracks = document.tracks
+      .filter((entry) => entry.kind === "video")
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    const locked = {
+      ...document,
+      tracks: document.tracks.map((entry) =>
+        entry.id === videoTracks[0]!.id ? { ...entry, locked: true } : entry,
+      ),
+    };
     expect(defaultTrackFor(locked, "video")!.id).toBe(videoTracks[1]!.id);
   });
 
@@ -117,7 +136,12 @@ describe("defaultTrackFor", () => {
 
   it("returns undefined when every track of the kind is locked", () => {
     const document = baseDocument();
-    const allLocked = { ...document, tracks: document.tracks.map((entry) => (entry.kind === "video" ? { ...entry, locked: true } : entry)) };
+    const allLocked = {
+      ...document,
+      tracks: document.tracks.map((entry) =>
+        entry.kind === "video" ? { ...entry, locked: true } : entry,
+      ),
+    };
     expect(defaultTrackFor(allLocked, "video")).toBeUndefined();
   });
 });
@@ -126,9 +150,19 @@ describe("placeClip", () => {
   it("clears exactly the destination range so no two clips overlap", () => {
     const document = baseDocument();
     const track = defaultTrackFor(document, "video")!;
-    const existing = createClip({ trackId: track.id, sequenceId: track.sequenceId, startFrame: 0, durationFrames: 100 });
+    const existing = createClip({
+      trackId: track.id,
+      sequenceId: track.sequenceId,
+      startFrame: 0,
+      durationFrames: 100,
+    });
     const withExisting = placeClip(document, existing);
-    const incoming = createClip({ trackId: track.id, sequenceId: track.sequenceId, startFrame: 40, durationFrames: 30 });
+    const incoming = createClip({
+      trackId: track.id,
+      sequenceId: track.sequenceId,
+      startFrame: 40,
+      durationFrames: 30,
+    });
     const result = placeClip(withExisting, incoming);
 
     // The old clip is fully replaced inside [40, 70) and is gone entirely (it was swallowed).
@@ -142,9 +176,19 @@ describe("placeClip", () => {
     const document = baseDocument();
     const video = defaultTrackFor(document, "video")!;
     const audio = defaultTrackFor(document, "audio")!;
-    const audioClip = createClip({ trackId: audio.id, sequenceId: audio.sequenceId, startFrame: 0, durationFrames: 60 });
+    const audioClip = createClip({
+      trackId: audio.id,
+      sequenceId: audio.sequenceId,
+      startFrame: 0,
+      durationFrames: 60,
+    });
     const withAudio = placeClip(document, audioClip);
-    const videoClip = createClip({ trackId: video.id, sequenceId: video.sequenceId, startFrame: 0, durationFrames: 60 });
+    const videoClip = createClip({
+      trackId: video.id,
+      sequenceId: video.sequenceId,
+      startFrame: 0,
+      durationFrames: 60,
+    });
     const result = placeClip(withAudio, videoClip);
     expect(result.clips).toHaveLength(2);
     expect(result.clips.some((clip) => clip.id === audioClip.id)).toBe(true);
@@ -163,7 +207,10 @@ describe("storyboard conversion: creates clips without flattening", () => {
    * The exact conversion the storyboard view performs: one clip per shot, laid end to end on
    * the first unlocked video track. Nothing is merged and no rendered asset is produced.
    */
-  function convertShots(document: EditorDocument, shots: Shot[]): { document: EditorDocument; createdIds: string[] } {
+  function convertShots(
+    document: EditorDocument,
+    shots: Shot[],
+  ): { document: EditorDocument; createdIds: string[] } {
     const track = defaultTrackFor(document, "video");
     if (!track) throw new Error("no track");
     let cursor = 0;
@@ -187,7 +234,12 @@ describe("storyboard conversion: creates clips without flattening", () => {
   }
 
   const shots: Shot[] = [
-    { label: "Opening", durationSeconds: 4, prompt: "Wide establishing shot", referenceAssetId: null },
+    {
+      label: "Opening",
+      durationSeconds: 4,
+      prompt: "Wide establishing shot",
+      referenceAssetId: null,
+    },
     { label: "Subject", durationSeconds: 3, prompt: "Medium shot", referenceAssetId: null },
     { label: "Detail", durationSeconds: 2.5, prompt: "Macro detail", referenceAssetId: null },
     { label: "Payoff", durationSeconds: 4.5, prompt: "Reverse angle", referenceAssetId: null },
@@ -230,10 +282,28 @@ describe("storyboard conversion: creates clips without flattening", () => {
     const store = createEditorStore(baseDocument());
     const track = defaultTrackFor(store.getState().document, "video")!;
     store.getState().applyEdit("Storyboard: Opening", (current) =>
-      placeClip(current, createClip({ trackId: track.id, sequenceId: track.sequenceId, label: "Opening", startFrame: 0, durationFrames: 120 })),
+      placeClip(
+        current,
+        createClip({
+          trackId: track.id,
+          sequenceId: track.sequenceId,
+          label: "Opening",
+          startFrame: 0,
+          durationFrames: 120,
+        }),
+      ),
     );
     store.getState().applyEdit("Storyboard: Subject", (current) =>
-      placeClip(current, createClip({ trackId: track.id, sequenceId: track.sequenceId, label: "Subject", startFrame: 120, durationFrames: 90 })),
+      placeClip(
+        current,
+        createClip({
+          trackId: track.id,
+          sequenceId: track.sequenceId,
+          label: "Subject",
+          startFrame: 120,
+          durationFrames: 90,
+        }),
+      ),
     );
     expect(store.getState().document.clips).toHaveLength(2);
 
@@ -242,6 +312,8 @@ describe("storyboard conversion: creates clips without flattening", () => {
     const moved = store.getState().document.clips.find((clip: Clip) => clip.id === second.id)!;
     expect(moved.startFrame).toBe(300);
     // The first clip was not touched: that is what "not flattened" buys the user.
-    expect(store.getState().document.clips.find((clip: Clip) => clip.label === "Opening")!.startFrame).toBe(0);
+    expect(
+      store.getState().document.clips.find((clip: Clip) => clip.label === "Opening")!.startFrame,
+    ).toBe(0);
   });
 });

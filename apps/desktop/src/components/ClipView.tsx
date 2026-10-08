@@ -26,7 +26,11 @@ export interface ClipViewProps {
   /** Interleaved min/max peaks for audio clips. */
   peaks: readonly number[][] | null;
   onPointerDownBody: (event: ReactPointerEvent<HTMLElement>, clipId: string) => void;
-  onPointerDownHandle: (event: ReactPointerEvent<HTMLElement>, clipId: string, edge: "start" | "end") => void;
+  onPointerDownHandle: (
+    event: ReactPointerEvent<HTMLElement>,
+    clipId: string,
+    edge: "start" | "end",
+  ) => void;
   onSplitHere: (clipId: string) => void;
 }
 
@@ -81,13 +85,24 @@ function ClipViewImpl({
       ) : (
         <div className="clip__thumbs" aria-hidden="true">
           {thumbnails.slice(0, Math.max(1, Math.ceil(width / 74))).map((thumbnail, index) => (
-            <img key={`${clip.id}-thumb-${index}`} className="clip__thumb" src={thumbnail} alt="" width={74} draggable={false} />
+            <img
+              key={`${clip.id}-thumb-${index}`}
+              className="clip__thumb"
+              src={thumbnail}
+              alt=""
+              width={74}
+              draggable={false}
+            />
           ))}
         </div>
       )}
 
       {fadeIn > 0 ? (
-        <div className="clip__fade" style={{ left: 0, width: Math.max(1, fadeIn * zoom) }} aria-hidden="true" />
+        <div
+          className="clip__fade"
+          style={{ left: 0, width: Math.max(1, fadeIn * zoom) }}
+          aria-hidden="true"
+        />
       ) : null}
       {fadeOut > 0 ? (
         <div
@@ -147,7 +162,15 @@ function ClipViewImpl({
   );
 }
 
-function Waveform({ peaks, width, height }: { peaks: readonly number[][]; width: number; height: number }) {
+function Waveform({
+  peaks,
+  width,
+  height,
+}: {
+  peaks: readonly number[][];
+  width: number;
+  height: number;
+}) {
   if (peaks.length === 0) return null;
   const mid = height / 2;
   const step = width / peaks.length;
@@ -160,7 +183,12 @@ function Waveform({ peaks, width, height }: { peaks: readonly number[][]; width:
     })
     .join(" ");
   return (
-    <svg className="clip__waveform" viewBox={`0 0 ${Math.max(1, width)} ${Math.max(1, height)}`} preserveAspectRatio="none" aria-hidden="true">
+    <svg
+      className="clip__waveform"
+      viewBox={`0 0 ${Math.max(1, width)} ${Math.max(1, height)}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
       <path d={path} stroke="rgba(255,255,255,0.85)" strokeWidth={1} fill="none" />
     </svg>
   );

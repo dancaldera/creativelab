@@ -24,7 +24,12 @@ import { Toolbar } from "./components/Toolbar";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSaveProject, useSettings } from "./hooks/queries";
 import { useEditorStore } from "./state/editorStore";
-import { UI_SETTINGS_KEY, sanitizePersisted, useUiStore, type PersistedUiState } from "./state/uiStore";
+import {
+  UI_SETTINGS_KEY,
+  sanitizePersisted,
+  useUiStore,
+  type PersistedUiState,
+} from "./state/uiStore";
 
 export function App() {
   const reducedMotion = useUiStore((state) => state.reducedMotion);
@@ -70,7 +75,10 @@ export function App() {
       markSaving(false, new Date().toISOString());
     } catch (error) {
       markSaving(false);
-      showToast(`Could not save the layout: ${error instanceof Error ? error.message : String(error)}`, "warn");
+      showToast(
+        `Could not save the layout: ${error instanceof Error ? error.message : String(error)}`,
+        "warn",
+      );
     }
   }, [markSaving, showToast, snapshot]);
 
@@ -95,7 +103,9 @@ export function App() {
     const bootstrap = async (): Promise<void> => {
       const bridge = getBridge();
       try {
-        const session = await bridge.projectOpen({ workspacePath: "/Users/studio/CreativeLab/Demo Project" });
+        const session = await bridge.projectOpen({
+          workspacePath: "/Users/studio/CreativeLab/Demo Project",
+        });
         if (cancelled) return;
         workspacePathRef.current = session.workspacePath;
         loadDocument(session.document as never, session.workspacePath);
@@ -114,7 +124,10 @@ export function App() {
         });
         workspacePathRef.current = fallback.workspacePath;
         loadDocument(fallback.document as never, fallback.workspacePath);
-        showToast(`Started a new project (${error instanceof Error ? error.message : String(error)}).`, "info");
+        showToast(
+          `Started a new project (${error instanceof Error ? error.message : String(error)}).`,
+          "info",
+        );
       }
     };
     void bootstrap();
@@ -150,7 +163,10 @@ export function App() {
       setRecoveryOffer(session.recovery);
       showToast(`Opened ${session.workspacePath}.`, "info");
     } catch (error) {
-      showToast(`Could not open the project: ${error instanceof Error ? error.message : String(error)}`, "error");
+      showToast(
+        `Could not open the project: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   }, [loadDocument, showToast]);
 
@@ -160,10 +176,15 @@ export function App() {
       showToast("Open a project before packaging.", "warn");
       return;
     }
-    const dialog = await getBridge().dialogSaveFile({ defaultPath: `${workspacePath}/exports/project-package.zip` });
+    const dialog = await getBridge().dialogSaveFile({
+      defaultPath: `${workspacePath}/exports/project-package.zip`,
+    });
     if (dialog.canceled || dialog.paths.length === 0) return;
     const response = await getBridge().projectPackage({ destinationPath: dialog.paths[0]! });
-    showToast(`Packaged ${response.files} files (portable: ${response.portable ? "yes" : "no"}).`, response.portable ? "info" : "warn");
+    showToast(
+      `Packaged ${response.files} files (portable: ${response.portable ? "yes" : "no"}).`,
+      response.portable ? "info" : "warn",
+    );
   }, [showToast]);
 
   const preview = useMemo(() => <PreviewCanvas />, []);
@@ -183,10 +204,16 @@ export function App() {
                 const session = await getBridge().projectOpen({ workspacePath });
                 loadDocument(session.document as never, session.workspacePath);
                 const recovered = session.recovery ?? recoveryOffer;
-                showToast(`Recovered the ${recovered.reason} snapshot from ${new Date(recovered.writtenAt).toLocaleTimeString()}.`, "info");
+                showToast(
+                  `Recovered the ${recovered.reason} snapshot from ${new Date(recovered.writtenAt).toLocaleTimeString()}.`,
+                  "info",
+                );
               }
             } catch (error) {
-              showToast(`Could not recover the snapshot: ${error instanceof Error ? error.message : String(error)}`, "error");
+              showToast(
+                `Could not recover the snapshot: ${error instanceof Error ? error.message : String(error)}`,
+                "error",
+              );
             } finally {
               setRecoveryOffer(null);
               setRecoveryNotice(null);
@@ -231,7 +258,12 @@ export function App() {
       {lastError ? (
         <p className="toast toast--error" role="alert">
           {lastError}
-          <button type="button" className="btn btn--ghost" onClick={() => setError(null)} aria-label="Dismiss the error">
+          <button
+            type="button"
+            className="btn btn--ghost"
+            onClick={() => setError(null)}
+            aria-label="Dismiss the error"
+          >
             ✕
           </button>
         </p>
@@ -244,7 +276,9 @@ export function App() {
           aria-live="polite"
         >
           {toast.message}
-          {recoveryNotice ? <span className="sr-only"> Recovery snapshot available at {recoveryNotice}.</span> : null}
+          {recoveryNotice ? (
+            <span className="sr-only"> Recovery snapshot available at {recoveryNotice}.</span>
+          ) : null}
         </p>
       ) : null}
     </>

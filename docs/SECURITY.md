@@ -38,7 +38,7 @@ validated, and every path is confined to the workspace the user opened.
 | Control                                                                                                                | Where                                                                       |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | 34-command allowlist; unknown commands are rejected                                                                    | `protocol.ts` (`IPC_COMMANDS`) and `apps/desktop/src-tauri/src/security.rs` |
-| Only `core:default`, `dialog:default`, `opener:default` are granted. No `fs:*`, no `shell:*`, no `http:*`              | `apps/desktop/src-tauri/capabilities/default.json`                      |
+| Only `core:default`, `dialog:default`, `opener:default` are granted. No `fs:*`, no `shell:*`, no `http:*`              | `apps/desktop/src-tauri/capabilities/default.json`                          |
 | Path scoping: rejects `..`, absolute paths, drive letters, UNC prefixes, backslashes, NUL bytes and control characters | `packages/core/src/workspace.ts`, `security.rs`                             |
 | Symlink escape is rejected by canonicalising and re-checking, not by string prefix comparison                          | `security.rs`, tested with a symlink pointing outside the workspace         |
 

@@ -70,7 +70,8 @@ function trackRank(document: EditorDocument, trackId: string): number {
  * produces a layer (flagged `missing`) so the user sees the gap they are about to export.
  */
 export function planFrame(document: EditorDocument, frame: number): FramePlan {
-  const activeSequence = document.sequences.find((sequence) => sequence.isActive) ?? document.sequences[0];
+  const activeSequence =
+    document.sequences.find((sequence) => sequence.isActive) ?? document.sequences[0];
   const width = activeSequence?.width ?? document.project.width;
   const height = activeSequence?.height ?? document.project.height;
   const assetsById = new Map(document.assets.map((asset) => [asset.id, asset]));
@@ -82,7 +83,9 @@ export function planFrame(document: EditorDocument, frame: number): FramePlan {
     return true;
   });
 
-  const ordered = [...visible].sort((a, b) => trackRank(document, b.trackId) - trackRank(document, a.trackId));
+  const ordered = [...visible].sort(
+    (a, b) => trackRank(document, b.trackId) - trackRank(document, a.trackId),
+  );
 
   const layers: FrameLayer[] = [];
   const captions: string[] = [];
@@ -93,7 +96,10 @@ export function planFrame(document: EditorDocument, frame: number): FramePlan {
     const asset = clip.assetId ? assetsById.get(clip.assetId) : undefined;
     if (asset?.missingAt) hasMissingMedia = true;
     if (track?.kind === "caption") {
-      const text = typeof clip.properties.notes === "string" && clip.properties.notes.length > 0 ? clip.properties.notes : clip.label;
+      const text =
+        typeof clip.properties.notes === "string" && clip.properties.notes.length > 0
+          ? clip.properties.notes
+          : clip.label;
       if (text) captions.push(text);
       continue;
     }
@@ -126,11 +132,18 @@ export function planFrame(document: EditorDocument, frame: number): FramePlan {
  * decoder for. Speed-aware and clamped to the source span so the preview never asks for a
  * frame the asset does not have.
  */
-export function sourceSecondsFor(clip: Clip, frame: number, asset: Asset | undefined, fps: { num: number; den: number }): number {
+export function sourceSecondsFor(
+  clip: Clip,
+  frame: number,
+  asset: Asset | undefined,
+  fps: { num: number; den: number },
+): number {
   const offset = Math.max(0, frame - clip.startFrame);
   const { num, den } = clip.properties.speed;
   const sourceFrame = clip.sourceInFrame + Math.floor((offset * num) / den);
-  const bounded = asset?.durationFrames ? Math.min(sourceFrame, Math.max(0, asset.durationFrames - 1)) : sourceFrame;
+  const bounded = asset?.durationFrames
+    ? Math.min(sourceFrame, Math.max(0, asset.durationFrames - 1))
+    : sourceFrame;
   return (bounded * fps.den) / fps.num;
 }
 
@@ -141,6 +154,8 @@ export function audibleTracksAtFrame(document: EditorDocument, frame: number): T
   return audio.filter((track) => {
     if (track.muted) return false;
     if (anySolo && !track.solo) return false;
-    return document.clips.some((clip) => clip.trackId === track.id && frame >= clip.startFrame && frame < clipEnd(clip));
+    return document.clips.some(
+      (clip) => clip.trackId === track.id && frame >= clip.startFrame && frame < clipEnd(clip),
+    );
   });
 }

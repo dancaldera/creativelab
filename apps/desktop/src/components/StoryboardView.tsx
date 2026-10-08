@@ -26,10 +26,34 @@ export interface StoryboardShot {
 }
 
 const SEED_SHOTS: StoryboardShot[] = [
-  { id: "shot-1", label: "Opening", prompt: "Wide establishing shot, golden hour", durationSeconds: 4, referenceAssetId: null },
-  { id: "shot-2", label: "Subject", prompt: "Medium shot, subject enters frame left", durationSeconds: 3, referenceAssetId: null },
-  { id: "shot-3", label: "Detail", prompt: "Macro detail, slow rack focus", durationSeconds: 2.5, referenceAssetId: null },
-  { id: "shot-4", label: "Payoff", prompt: "Reverse angle, warm practical lights", durationSeconds: 4.5, referenceAssetId: null },
+  {
+    id: "shot-1",
+    label: "Opening",
+    prompt: "Wide establishing shot, golden hour",
+    durationSeconds: 4,
+    referenceAssetId: null,
+  },
+  {
+    id: "shot-2",
+    label: "Subject",
+    prompt: "Medium shot, subject enters frame left",
+    durationSeconds: 3,
+    referenceAssetId: null,
+  },
+  {
+    id: "shot-3",
+    label: "Detail",
+    prompt: "Macro detail, slow rack focus",
+    durationSeconds: 2.5,
+    referenceAssetId: null,
+  },
+  {
+    id: "shot-4",
+    label: "Payoff",
+    prompt: "Reverse angle, warm practical lights",
+    durationSeconds: 4.5,
+    referenceAssetId: null,
+  },
 ];
 
 export function StoryboardView() {
@@ -41,7 +65,8 @@ export function StoryboardView() {
   const [shots, setShots] = useState<StoryboardShot[]>(SEED_SHOTS);
   const [converting, setConverting] = useState(false);
 
-  const sequence = document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
+  const sequence =
+    document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
   const fps = sequence?.fps ?? document.project.fps;
   const framesPerSecond = fps.num / fps.den;
 
@@ -75,7 +100,9 @@ export function StoryboardView() {
     setConverting(true);
     try {
       const state = useEditorStore.getState();
-      const track = state.document.tracks.filter((candidate) => candidate.kind === "video" && !candidate.locked).sort((a, b) => a.sortOrder - b.sortOrder)[0];
+      const track = state.document.tracks
+        .filter((candidate) => candidate.kind === "video" && !candidate.locked)
+        .sort((a, b) => a.sortOrder - b.sortOrder)[0];
       if (!track) {
         showToast("No unlocked video track to convert into.", "warn");
         return;
@@ -101,7 +128,10 @@ export function StoryboardView() {
         created.push(durationFrames);
         cursor += durationFrames;
       }
-      showToast(`Created ${created.length} separate clips (${cursor} frames) without merging anything.`, "info");
+      showToast(
+        `Created ${created.length} separate clips (${cursor} frames) without merging anything.`,
+        "info",
+      );
       setStoryboardOpen(false);
     } finally {
       setConverting(false);
@@ -111,7 +141,12 @@ export function StoryboardView() {
   return (
     <div className="panel-scroll" style={{ maxHeight: "100%" }}>
       <div className="panel-toolbar">
-        <button type="button" className="btn btn--primary" onClick={convertToTimeline} disabled={converting || shots.length === 0}>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={convertToTimeline}
+          disabled={converting || shots.length === 0}
+        >
           {converting ? "Converting…" : "Convert to timeline"}
         </button>
         <button
@@ -120,7 +155,13 @@ export function StoryboardView() {
           onClick={() =>
             setShots((current) => [
               ...current,
-              { id: `shot-${Date.now().toString(36)}`, label: `Shot ${current.length + 1}`, prompt: "", durationSeconds: 3, referenceAssetId: null },
+              {
+                id: `shot-${Date.now().toString(36)}`,
+                label: `Shot ${current.length + 1}`,
+                prompt: "",
+                durationSeconds: 3,
+                referenceAssetId: null,
+              },
             ])
           }
         >
@@ -128,13 +169,18 @@ export function StoryboardView() {
         </button>
         <div className="spacer" />
         <span className="badge">
-          {shots.length} shots · {totalSeconds.toFixed(1)}s · {ASPECT_PRESETS_LOCAL.find((preset) => preset.width === document.project.width && preset.height === document.project.height)?.label ?? "custom"}
+          {shots.length} shots · {totalSeconds.toFixed(1)}s ·{" "}
+          {ASPECT_PRESETS_LOCAL.find(
+            (preset) =>
+              preset.width === document.project.width && preset.height === document.project.height,
+          )?.label ?? "custom"}
         </span>
       </div>
 
       <p className="small muted">
-        Conversion creates one clip per shot on the first unlocked video track. Shots are never merged into a single flattened asset, so each
-        one stays trimmable, replaceable and regenerable.
+        Conversion creates one clip per shot on the first unlocked video track. Shots are never
+        merged into a single flattened asset, so each one stays trimmable, replaceable and
+        regenerable.
       </p>
 
       <div className="storyboard">
@@ -143,17 +189,29 @@ export function StoryboardView() {
             <header className="storyboard__shot-header">
               <span className="storyboard__shot-index">#{index + 1}</span>
               <div className="row">
-                <button type="button" className="btn btn--ghost btn--icon" aria-label={`Move ${shot.label} earlier`} onClick={() => move(index, -1)}>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--icon"
+                  aria-label={`Move ${shot.label} earlier`}
+                  onClick={() => move(index, -1)}
+                >
                   ▲
                 </button>
-                <button type="button" className="btn btn--ghost btn--icon" aria-label={`Move ${shot.label} later`} onClick={() => move(index, 1)}>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--icon"
+                  aria-label={`Move ${shot.label} later`}
+                  onClick={() => move(index, 1)}
+                >
                   ▼
                 </button>
                 <button
                   type="button"
                   className="btn btn--ghost btn--icon"
                   aria-label={`Remove ${shot.label}`}
-                  onClick={() => setShots((current) => current.filter((candidate) => candidate.id !== shot.id))}
+                  onClick={() =>
+                    setShots((current) => current.filter((candidate) => candidate.id !== shot.id))
+                  }
                 >
                   ✕
                 </button>
@@ -192,7 +250,11 @@ export function StoryboardView() {
                 min={0.5}
                 step={0.5}
                 value={shot.durationSeconds}
-                onChange={(event) => patch(shot.id, { durationSeconds: Math.max(0.5, Number(event.target.value) || 0.5) })}
+                onChange={(event) =>
+                  patch(shot.id, {
+                    durationSeconds: Math.max(0.5, Number(event.target.value) || 0.5),
+                  })
+                }
               />
             </div>
 
@@ -202,7 +264,9 @@ export function StoryboardView() {
                 id={`shot-reference-${shot.id}`}
                 className="select"
                 value={shot.referenceAssetId ?? ""}
-                onChange={(event) => patch(shot.id, { referenceAssetId: event.target.value || null })}
+                onChange={(event) =>
+                  patch(shot.id, { referenceAssetId: event.target.value || null })
+                }
               >
                 <option value="">None</option>
                 {document.assets
@@ -223,7 +287,10 @@ export function StoryboardView() {
                   const first = document.assets[0];
                   if (!first) return;
                   insertAssetAt(first.id, 0, null, fps);
-                  showToast(`Appended ${first.mediaType} asset to the timeline at frame 0.`, "info");
+                  showToast(
+                    `Appended ${first.mediaType} asset to the timeline at frame 0.`,
+                    "info",
+                  );
                 }}
               >
                 Append library asset
@@ -236,8 +303,16 @@ export function StoryboardView() {
   );
 }
 
-function ShotReference({ shot, workspacePath }: { shot: StoryboardShot; workspacePath: string | null }) {
-  const asset = useEditorStore((state) => state.document.assets.find((candidate) => candidate.id === shot.referenceAssetId));
+function ShotReference({
+  shot,
+  workspacePath,
+}: {
+  shot: StoryboardShot;
+  workspacePath: string | null;
+}) {
+  const asset = useEditorStore((state) =>
+    state.document.assets.find((candidate) => candidate.id === shot.referenceAssetId),
+  );
   const thumbnail = useAssetThumbnail(asset, workspacePath);
 
   if (!shot.referenceAssetId || !asset) {
@@ -248,7 +323,11 @@ function ShotReference({ shot, workspacePath }: { shot: StoryboardShot; workspac
     );
   }
   return thumbnail.data?.relativePath ? (
-    <img className="storyboard__thumb" src={thumbnail.data.relativePath} alt={`Reference for ${shot.label}`} />
+    <img
+      className="storyboard__thumb"
+      src={thumbnail.data.relativePath}
+      alt={`Reference for ${shot.label}`}
+    />
   ) : (
     <div className="storyboard__thumb storyboard__placeholder" aria-hidden="true">
       {asset.mediaType} · {formatBytes(asset.bytes)}
@@ -257,7 +336,10 @@ function ShotReference({ shot, workspacePath }: { shot: StoryboardShot; workspac
 }
 
 /** A storyboard shot's timeline footprint in frames, used by tests and the converter. */
-export function shotDurationFrames(shot: StoryboardShot, fps: { num: number; den: number }): number {
+export function shotDurationFrames(
+  shot: StoryboardShot,
+  fps: { num: number; den: number },
+): number {
   return Math.max(1, Math.round(shot.durationSeconds * (fps.num / fps.den)));
 }
 

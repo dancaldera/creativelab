@@ -478,13 +478,20 @@ export interface StudioBridge {
   projectClose(): Promise<void>;
   projectListRecent(): Promise<ProjectSummaryDto[]>;
   projectPackage(request: ProjectPackageRequest): Promise<ProjectPackageResponse>;
-  projectBackup(request: { workspacePath: string; label?: string }): Promise<{ destination: string; files: number }>;
+  projectBackup(request: {
+    workspacePath: string;
+    label?: string;
+  }): Promise<{ destination: string; files: number }>;
 
   workspaceUsage(request: WorkspaceUsageRequest): Promise<WorkspaceUsageResponse>;
   workspacePurgeCaches(request: WorkspaceUsageRequest): Promise<{ purged: string[] }>;
 
   assetImport(request: AssetImportRequest): Promise<AssetImportResponse>;
-  assetRelink(request: { workspacePath: string; assetId: string; newPath: string }): Promise<AssetDto>;
+  assetRelink(request: {
+    workspacePath: string;
+    assetId: string;
+    newPath: string;
+  }): Promise<AssetDto>;
   assetProbe(request: { workspacePath: string; assetId: string }): Promise<AssetDto>;
   assetDelete(request: { workspacePath: string; assetId: string }): Promise<void>;
 
@@ -511,7 +518,10 @@ export interface StudioBridge {
 
   dialogOpenFile(request: { multiple?: boolean; filters?: FileFilter[] }): Promise<DialogResultDto>;
   dialogOpenDirectory(request?: { title?: string }): Promise<DialogResultDto>;
-  dialogSaveFile(request: { defaultPath?: string; filters?: FileFilter[] }): Promise<DialogResultDto>;
+  dialogSaveFile(request: {
+    defaultPath?: string;
+    filters?: FileFilter[];
+  }): Promise<DialogResultDto>;
 
   settingsGet(request: SettingsGetRequest): Promise<SettingsGetResponse>;
   settingsSet(request: SettingsSetRequest): Promise<void>;
@@ -524,7 +534,25 @@ export interface FileFilter {
 
 /** Media filters reused by both the mock and the native dialog. */
 export const IMPORT_FILTERS: FileFilter[] = [
-  { name: "Media", extensions: ["mp4", "mov", "webm", "mkv", "m4v", "png", "jpg", "jpeg", "webp", "wav", "mp3", "m4a", "aac", "flac"] },
+  {
+    name: "Media",
+    extensions: [
+      "mp4",
+      "mov",
+      "webm",
+      "mkv",
+      "m4v",
+      "png",
+      "jpg",
+      "jpeg",
+      "webp",
+      "wav",
+      "mp3",
+      "m4a",
+      "aac",
+      "flac",
+    ],
+  },
   { name: "Video", extensions: ["mp4", "mov", "webm", "mkv", "m4v"] },
   { name: "Image", extensions: ["png", "jpg", "jpeg", "webp"] },
   { name: "Audio", extensions: ["wav", "mp3", "m4a", "aac", "flac"] },

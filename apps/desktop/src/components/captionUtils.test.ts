@@ -55,10 +55,7 @@ describe("srtTimestamp", () => {
 describe("buildSrt", () => {
   it("numbers segments from one and sorts them by start frame", () => {
     const srt = buildSrt(
-      [
-        captionClip("clp_b", 60, 30, "second line"),
-        captionClip("clp_a", 0, 30, "first line"),
-      ],
+      [captionClip("clp_b", 60, 30, "second line"), captionClip("clp_a", 0, 30, "first line")],
       FPS,
     );
     expect(srt).toBe(
@@ -80,7 +77,10 @@ describe("buildSrt", () => {
   });
 
   it("falls back to the clip label when no note is recorded", () => {
-    const clip: Clip = { ...captionClip("clp_a", 0, 15, "fallback"), properties: { ...DEFAULT_CLIP_PROPERTIES } };
+    const clip: Clip = {
+      ...captionClip("clp_a", 0, 15, "fallback"),
+      properties: { ...DEFAULT_CLIP_PROPERTIES },
+    };
     expect(buildSrt([clip], FPS)).toContain("fallback\n");
   });
 });
@@ -147,7 +147,10 @@ describe("caption segment edits reach the store through the undo stack", () => {
     });
     const track = base.tracks.find((entry) => entry.kind === "caption")!;
     const clip = captionClip("clp_c", 0, 30, "first pass");
-    const store = createEditorStore({ ...base, clips: [{ ...clip, trackId: track.id, sequenceId: base.sequences[0]!.id }] });
+    const store = createEditorStore({
+      ...base,
+      clips: [{ ...clip, trackId: track.id, sequenceId: base.sequences[0]!.id }],
+    });
     return { store, clipId: clip.id };
   }
 
@@ -167,7 +170,9 @@ describe("caption segment edits reach the store through the undo stack", () => {
       (current) => ({
         ...current,
         clips: current.clips.map((candidate) =>
-          candidate.id === clipId ? { ...candidate, startFrame: 60, durationFrames: 45 } : candidate,
+          candidate.id === clipId
+            ? { ...candidate, startFrame: 60, durationFrames: 45 }
+            : candidate,
         ),
       }),
       { coalesce: false },

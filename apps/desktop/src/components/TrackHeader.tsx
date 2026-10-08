@@ -39,10 +39,20 @@ export function TrackHeader({
       aria-label={`${track.name} ${trackKindLabel(track.kind)} track`}
     >
       <div className="track-header__order" role="group" aria-label={`Reorder ${track.name}`}>
-        <button type="button" className="btn btn--ghost" onClick={() => onReorder(-1)} aria-label={`Move ${track.name} up`}>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={() => onReorder(-1)}
+          aria-label={`Move ${track.name} up`}
+        >
           ▲
         </button>
-        <button type="button" className="btn btn--ghost" onClick={() => onReorder(1)} aria-label={`Move ${track.name} down`}>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={() => onReorder(1)}
+          aria-label={`Move ${track.name} down`}
+        >
           ▼
         </button>
       </div>
@@ -115,7 +125,9 @@ export function TrackHeader({
           value={track.volumeDb}
           aria-label={`${track.name} volume in decibels`}
           title={`${track.volumeDb.toFixed(1)} dB`}
-          onChange={(event) => onUpdate({ volumeDb: Number(event.target.value) }, { coalesce: true })}
+          onChange={(event) =>
+            onUpdate({ volumeDb: Number(event.target.value) }, { coalesce: true })
+          }
         />
       ) : null}
 

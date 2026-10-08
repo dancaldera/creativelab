@@ -55,8 +55,12 @@ function isEditableElement(target: unknown): boolean {
   const tag = typeof element.tagName === "string" ? element.tagName.toUpperCase() : "";
   if (TYPING_TAGS.has(tag)) return true;
   if (element.isContentEditable === true) return true;
-  if (typeof element.getAttribute === "function" && element.getAttribute("role") === "textbox") return true;
-  if (typeof element.closest === "function" && element.closest("[contenteditable='true'],[data-shortcuts='off']")) {
+  if (typeof element.getAttribute === "function" && element.getAttribute("role") === "textbox")
+    return true;
+  if (
+    typeof element.closest === "function" &&
+    element.closest("[contenteditable='true'],[data-shortcuts='off']")
+  ) {
     return true;
   }
   return false;
@@ -182,7 +186,10 @@ export interface ShortcutHandlers {
 }
 
 /** Dispatch one resolved action through a handler bag. Returns true when handled. */
-export function dispatchShortcut(action: ShortcutAction | null, handlers: ShortcutHandlers): boolean {
+export function dispatchShortcut(
+  action: ShortcutAction | null,
+  handlers: ShortcutHandlers,
+): boolean {
   if (!action) return false;
   switch (action.type) {
     case "play-pause":
@@ -248,7 +255,9 @@ export function deleteSelectionVia(ripple: boolean): void {
   const selection = editor.selection;
   if (selection.size === 0) return;
   editor.applyEdit("Ripple delete", (document) => {
-    const locked = new Set(document.tracks.filter((track) => track.locked).map((track) => track.id));
+    const locked = new Set(
+      document.tracks.filter((track) => track.locked).map((track) => track.id),
+    );
     const ids = document.clips
       .filter((clip) => selection.has(clip.id) && !locked.has(clip.trackId))
       .map((clip) => clip.id);
@@ -303,7 +312,11 @@ export function useKeyboardShortcuts(enabled = true): void {
 
       if (!handled) return;
       // Space scrolls the page; Delete/Backspace can trigger back-navigation.
-      if (action.type === "play-pause" || action.type === "delete" || action.type === "delete-ripple") {
+      if (
+        action.type === "play-pause" ||
+        action.type === "delete" ||
+        action.type === "delete-ripple"
+      ) {
         event.preventDefault();
       }
     };

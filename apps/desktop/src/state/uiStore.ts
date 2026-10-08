@@ -147,13 +147,21 @@ export function sanitizePersisted(raw: unknown): Partial<PersistedUiState> {
 
   if (Array.isArray(record["layouts"])) {
     patch.layouts = (record["layouts"] as unknown[])
-      .filter((entry): entry is WorkspaceLayout => Boolean(entry) && typeof entry === "object" && typeof (entry as WorkspaceLayout).id === "string")
+      .filter(
+        (entry): entry is WorkspaceLayout =>
+          Boolean(entry) &&
+          typeof entry === "object" &&
+          typeof (entry as WorkspaceLayout).id === "string",
+      )
       .map((entry) => ({
         ...entry,
         visibility: { ...DEFAULT_VISIBILITY, ...(entry.visibility ?? {}) },
         sizes: {
           leftRail: clampSize("leftRail", Number(entry.sizes?.leftRail ?? DEFAULT_SIZES.leftRail)),
-          inspector: clampSize("inspector", Number(entry.sizes?.inspector ?? DEFAULT_SIZES.inspector)),
+          inspector: clampSize(
+            "inspector",
+            Number(entry.sizes?.inspector ?? DEFAULT_SIZES.inspector),
+          ),
           timeline: clampSize("timeline", Number(entry.sizes?.timeline ?? DEFAULT_SIZES.timeline)),
         },
       }));
@@ -191,11 +199,14 @@ export function createUiStore() {
 
     setActivePanel: (activePanel) => set({ activePanel }),
 
-    togglePanel: (panel) => set({ visibility: { ...get().visibility, [panel]: !get().visibility[panel] } }),
+    togglePanel: (panel) =>
+      set({ visibility: { ...get().visibility, [panel]: !get().visibility[panel] } }),
 
-    setPanelVisible: (panel, visible) => set({ visibility: { ...get().visibility, [panel]: visible } }),
+    setPanelVisible: (panel, visible) =>
+      set({ visibility: { ...get().visibility, [panel]: visible } }),
 
-    setSize: (panel, pixels) => set({ sizes: { ...get().sizes, [panel]: clampSize(panel, pixels) } }),
+    setSize: (panel, pixels) =>
+      set({ sizes: { ...get().sizes, [panel]: clampSize(panel, pixels) } }),
 
     setStoryboardOpen: (storyboardOpen) => set({ storyboardOpen }),
     setSettingsOpen: (settingsOpen) => set({ settingsOpen }),

@@ -39,11 +39,15 @@ export function JobsPanel() {
   }, [jobsQuery.data, syncJobs]);
 
   useEffect(() => {
-    if (jobsQuery.error) setError(jobsQuery.error instanceof Error ? jobsQuery.error.message : String(jobsQuery.error));
+    if (jobsQuery.error)
+      setError(
+        jobsQuery.error instanceof Error ? jobsQuery.error.message : String(jobsQuery.error),
+      );
   }, [jobsQuery.error, setError]);
 
   useEffect(() => {
-    if (reconcileQuery.data) syncReconcile(reconcileQuery.data.needsAttention, reconcileQuery.data.resumed);
+    if (reconcileQuery.data)
+      syncReconcile(reconcileQuery.data.needsAttention, reconcileQuery.data.resumed);
   }, [reconcileQuery.data, syncReconcile]);
 
   const unknownJobs = jobs.filter((job) => job.status === "unknown");
@@ -59,7 +63,11 @@ export function JobsPanel() {
     <div className="dialog__body">
       <p className="small muted">
         Workspace: <code className="mono">{workspacePath ?? "none"}</code>
-        {jobsQuery.isFetching ? " · polling…" : jobsQuery.dataUpdatedAt ? ` · last poll ${formatTimestamp(new Date(jobsQuery.dataUpdatedAt).toISOString())}` : ""}
+        {jobsQuery.isFetching
+          ? " · polling…"
+          : jobsQuery.dataUpdatedAt
+            ? ` · last poll ${formatTimestamp(new Date(jobsQuery.dataUpdatedAt).toISOString())}`
+            : ""}
       </p>
 
       {unknownJobs.length > 0 ? (
@@ -68,8 +76,9 @@ export function JobsPanel() {
             Needs a manual decision ({unknownJobs.length})
           </h3>
           <p className="callout callout--warning">
-            These jobs were in flight when the app stopped and their submission outcome is unverified. Retrying automatically could
-            charge you twice, so nothing is retried until you decide.
+            These jobs were in flight when the app stopped and their submission outcome is
+            unverified. Retrying automatically could charge you twice, so nothing is retried until
+            you decide.
           </p>
           {unknownJobs.map((job) => {
             const notice = needsAttention.find((entry) => entry.jobId === job.id);
@@ -78,11 +87,14 @@ export function JobsPanel() {
                 <div className="job-row__title">
                   <span className="job-row__model mono">{job.modelId}</span>
                   <span className="job-row__sub">
-                    {job.providerId} · {job.mode} · {notice?.reason ?? "uncertain submission outcome"}
+                    {job.providerId} · {job.mode} ·{" "}
+                    {notice?.reason ?? "uncertain submission outcome"}
                   </span>
                 </div>
                 <span className="badge badge--warning">{formatPercent(job.progress)}</span>
-                <span className="small muted mono">{job.costEstimate ? formatMoney(job.costEstimate) : "—"}</span>
+                <span className="small muted mono">
+                  {job.costEstimate ? formatMoney(job.costEstimate) : "—"}
+                </span>
                 <div className="job-row__actions">
                   <button
                     type="button"
@@ -99,9 +111,14 @@ export function JobsPanel() {
                     className="btn btn--danger"
                     disabled={!workspacePath || cancelJob.isPending}
                     onClick={() =>
-                      void cancelJob.mutateAsync(job.id).catch((error: unknown) =>
-                        showToast(`Cancel failed: ${error instanceof Error ? error.message : String(error)}`, "error"),
-                      )
+                      void cancelJob
+                        .mutateAsync(job.id)
+                        .catch((error: unknown) =>
+                          showToast(
+                            `Cancel failed: ${error instanceof Error ? error.message : String(error)}`,
+                            "error",
+                          ),
+                        )
                     }
                   >
                     Cancel
@@ -127,12 +144,23 @@ export function JobsPanel() {
               </span>
             </div>
             <div>
-              <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((job.progress ?? 0) * 100)}>
-                <div className="progress__fill" style={{ width: `${Math.round((job.progress ?? 0) * 100)}%` }} />
+              <div
+                className="progress"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round((job.progress ?? 0) * 100)}
+              >
+                <div
+                  className="progress__fill"
+                  style={{ width: `${Math.round((job.progress ?? 0) * 100)}%` }}
+                />
               </div>
               <span className="small muted">{formatPercent(job.progress)}</span>
             </div>
-            <span className="small muted mono">{job.costEstimate ? formatMoney(job.costEstimate) : "—"}</span>
+            <span className="small muted mono">
+              {job.costEstimate ? formatMoney(job.costEstimate) : "—"}
+            </span>
             <div className="job-row__actions">
               <button
                 type="button"
@@ -142,7 +170,12 @@ export function JobsPanel() {
                   void cancelJob
                     .mutateAsync(job.id)
                     .then(() => showToast(`Canceled ${job.id}.`, "info"))
-                    .catch((error: unknown) => showToast(`Cancel failed: ${error instanceof Error ? error.message : String(error)}`, "error"))
+                    .catch((error: unknown) =>
+                      showToast(
+                        `Cancel failed: ${error instanceof Error ? error.message : String(error)}`,
+                        "error",
+                      ),
+                    )
                 }
               >
                 Cancel
@@ -161,10 +194,16 @@ export function JobsPanel() {
           <div className="job-row" key={job.id}>
             <div className="job-row__title">
               <span className="job-row__model mono">{job.modelId}</span>
-              <span className="job-row__sub">{String((job.error as Record<string, unknown> | null)?.["message"] ?? "transient failure")}</span>
+              <span className="job-row__sub">
+                {String(
+                  (job.error as Record<string, unknown> | null)?.["message"] ?? "transient failure",
+                )}
+              </span>
             </div>
             <span className="badge badge--danger">failed</span>
-            <span className="small muted mono">{job.actualCost ? formatMoney(job.actualCost) : "—"}</span>
+            <span className="small muted mono">
+              {job.actualCost ? formatMoney(job.actualCost) : "—"}
+            </span>
             <div className="job-row__actions">
               <button
                 type="button"
@@ -174,7 +213,12 @@ export function JobsPanel() {
                   void retryJob
                     .mutateAsync(job.id)
                     .then(() => showToast(`Retrying ${job.id}.`, "info"))
-                    .catch((error: unknown) => showToast(`Retry failed: ${error instanceof Error ? error.message : String(error)}`, "error"))
+                    .catch((error: unknown) =>
+                      showToast(
+                        `Retry failed: ${error instanceof Error ? error.message : String(error)}`,
+                        "error",
+                      ),
+                    )
                 }
               >
                 Retry
@@ -186,23 +230,33 @@ export function JobsPanel() {
 
       {resumed.length > 0 ? (
         <p className="callout callout--info">
-          Resumed polling for {resumed.length} job{resumed.length === 1 ? "" : "s"} that already had a provider job id, so no new request was
-          sent.
+          Resumed polling for {resumed.length} job{resumed.length === 1 ? "" : "s"} that already had
+          a provider job id, so no new request was sent.
         </p>
       ) : null}
 
       <p className="small muted">
-        Cost control is enforced before submission: per-job caps, a daily ceiling and an approval threshold all live in Settings → Budget.
+        Cost control is enforced before submission: per-job caps, a daily ceiling and an approval
+        threshold all live in Settings → Budget.
       </p>
     </div>
   );
 
   if (!jobsOpen) {
     return (
-      <section className="rail__panel" aria-label="Background jobs" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+      <section
+        className="rail__panel"
+        aria-label="Background jobs"
+        style={{ borderTop: "1px solid var(--border-subtle)" }}
+      >
         <header className="rail__panel-header">
           <h2 className="rail__panel-title">Background jobs</h2>
-          <button type="button" className="btn" onClick={() => setJobsOpen(true)} aria-expanded={false}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setJobsOpen(true)}
+            aria-expanded={false}
+          >
             Expand
           </button>
         </header>
@@ -216,14 +270,21 @@ export function JobsPanel() {
       <div className="dialog dialog--wide">
         <div className="dialog__header">
           <h2 className="dialog__title">Jobs and budgets</h2>
-          <button type="button" className="btn" onClick={() => setJobsOpen(false)} aria-label="Close the job queue">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setJobsOpen(false)}
+            aria-label="Close the job queue"
+          >
             Close
           </button>
         </div>
         {body}
         <div className="dialog__footer">
           <span className="small muted">
-            {getBridge().kind === "mock" ? "Mock bridge: jobs are simulated in memory." : "Native bridge: durable job queue."}
+            {getBridge().kind === "mock"
+              ? "Mock bridge: jobs are simulated in memory."
+              : "Native bridge: durable job queue."}
           </span>
           <div className="spacer" />
           <button type="button" className="btn" onClick={() => void jobsQuery.refetch()}>

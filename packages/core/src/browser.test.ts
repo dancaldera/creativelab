@@ -92,7 +92,10 @@ describe("@creativelab/core/browser", () => {
     const files = (await readdir(SOURCE_DIR))
       .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
       .map((name) => name.replace(/\.ts$/, ""))
-      .filter((name) => name !== "browser" && name !== "index" && !hostOnly.has(name) && !name.includes("."));
+      .filter(
+        (name) =>
+          name !== "browser" && name !== "index" && !hostOnly.has(name) && !name.includes("."),
+      );
 
     // Every candidate module should be deliberately classified, not silently skipped.
     for (const name of files) {

@@ -99,12 +99,17 @@ interface Harness {
  * different document and make every undo assertion meaningless).
  */
 function setup(
-  options: { clips?: Array<Partial<Clip> & { kind: "video" | "audio" }>; assets?: Asset[]; snap?: boolean } = {},
+  options: {
+    clips?: Array<Partial<Clip> & { kind: "video" | "audio" }>;
+    assets?: Asset[];
+    snap?: boolean;
+  } = {},
 ): Harness {
   const base = createInitialDocument(project());
   const videoTrackId = base.tracks.find((track) => track.kind === "video")!.id;
   const audioTrackId = base.tracks.find((track) => track.kind === "audio")!.id;
-  const trackFor = (kind: "video" | "audio"): string => (kind === "video" ? videoTrackId : audioTrackId);
+  const trackFor = (kind: "video" | "audio"): string =>
+    kind === "video" ? videoTrackId : audioTrackId;
 
   const clips = (options?.clips ?? []).map(({ kind, ...overrides }) =>
     makeClip({ sequenceId: base.sequences[0]!.id, trackId: trackFor(kind), ...overrides }),
@@ -119,13 +124,18 @@ function setup(
     document,
     videoTrackId,
     audioTrackId,
-    clip: (kind, overrides = {}) => makeClip({ trackId: trackFor(kind), sequenceId: base.sequences[0]!.id, ...overrides }),
+    clip: (kind, overrides = {}) =>
+      makeClip({ trackId: trackFor(kind), sequenceId: base.sequences[0]!.id, ...overrides }),
   };
 }
 
 describe("editorStore: split at playhead", () => {
   it("produces two clips whose sourceInFrame accounts for the removed head", () => {
-    const harness = setup({ clips: [{ kind: "video", id: "clp_whole", startFrame: 10, sourceInFrame: 100, durationFrames: 60 }] });
+    const harness = setup({
+      clips: [
+        { kind: "video", id: "clp_whole", startFrame: 10, sourceInFrame: 100, durationFrames: 60 },
+      ],
+    });
     const { store } = harness;
     const original = store.getState().document.clips[0]!;
 
@@ -148,12 +158,18 @@ describe("editorStore: split at playhead", () => {
   });
 
   it("advances the source by the trimmed amount when a clip carries speed", () => {
-    const harness = setup({ clips: [{ kind: "video", startFrame: 0, sourceInFrame: 0, durationFrames: 40 }] });
+    const harness = setup({
+      clips: [{ kind: "video", startFrame: 0, sourceInFrame: 0, durationFrames: 40 }],
+    });
     const clip = harness.store.getState().document.clips[0]!;
-    harness.store.getState().setClipProperties(clip.id, { speed: { num: 2, den: 1 } }, { coalesce: false });
+    harness.store
+      .getState()
+      .setClipProperties(clip.id, { speed: { num: 2, den: 1 } }, { coalesce: false });
     harness.store.getState().setPlayhead(20);
     harness.store.getState().splitAtPlayhead();
-    const right = harness.store.getState().document.clips.find((candidate) => candidate.startFrame === 20)!;
+    const right = harness.store
+      .getState()
+      .document.clips.find((candidate) => candidate.startFrame === 20)!;
     // 20 output frames at 2x speed consume 40 source frames.
     expect(right.sourceInFrame).toBe(40);
   });
@@ -181,7 +197,9 @@ describe("editorStore: split at playhead", () => {
 
   it("never splits a clip on a locked track", () => {
     const harness = setup({ clips: [{ kind: "video", startFrame: 0, durationFrames: 60 }] });
-    harness.store.getState().updateTrack(harness.videoTrackId, { locked: true }, { coalesce: false });
+    harness.store
+      .getState()
+      .updateTrack(harness.videoTrackId, { locked: true }, { coalesce: false });
     harness.store.getState().clearSelection();
     harness.store.getState().setPlayhead(30);
     harness.store.getState().splitAtPlayhead();
@@ -191,7 +209,9 @@ describe("editorStore: split at playhead", () => {
 
 describe("editorStore: trim clamps to source bounds", () => {
   it("cannot extend the head past source frame 0", () => {
-    const harness = setup({ clips: [{ kind: "video", startFrame: 30, sourceInFrame: 5, durationFrames: 40 }] });
+    const harness = setup({
+      clips: [{ kind: "video", startFrame: 30, sourceInFrame: 5, durationFrames: 40 }],
+    });
     const clip = harness.store.getState().document.clips[0]!;
     harness.store.getState().trimClipEdge(clip.id, "start", -100, { coalesce: false });
     const trimmed = harness.store.getState().document.clips[0]!;
@@ -205,7 +225,9 @@ describe("editorStore: trim clamps to source bounds", () => {
   it("cannot extend the tail past the end of the asset", () => {
     const asset = makeAsset({ id: "ast_000000000000000000000000", durationFrames: 40 });
     const harness = setup({
-      clips: [{ kind: "video", assetId: asset.id, startFrame: 0, sourceInFrame: 10, durationFrames: 20 }],
+      clips: [
+        { kind: "video", assetId: asset.id, startFrame: 0, sourceInFrame: 10, durationFrames: 20 },
+      ],
       assets: [asset],
     });
     const clip = harness.store.getState().document.clips[0]!;
@@ -219,7 +241,9 @@ describe("editorStore: trim clamps to source bounds", () => {
   it("cannot move the tail left past the asset start", () => {
     const asset = makeAsset({ id: "ast_000000000000000000000000", durationFrames: 40 });
     const harness = setup({
-      clips: [{ kind: "video", assetId: asset.id, startFrame: 0, sourceInFrame: 10, durationFrames: 20 }],
+      clips: [
+        { kind: "video", assetId: asset.id, startFrame: 0, sourceInFrame: 10, durationFrames: 20 },
+      ],
       assets: [asset],
     });
     const clip = harness.store.getState().document.clips[0]!;
@@ -252,7 +276,9 @@ describe("editorStore: move respects the edit mode", () => {
     store.getState().setEditMode("overwrite");
     store.getState().moveClip(moving.id, 90, { mode: "overwrite" });
 
-    const next = store.getState().document.clips.filter((clip) => clip.trackId === harness.videoTrackId);
+    const next = store
+      .getState()
+      .document.clips.filter((clip) => clip.trackId === harness.videoTrackId);
     const moved = next.find((clip) => clip.id === moving.id)!;
     expect(moved.startFrame).toBe(90);
     expect(moved.durationFrames).toBe(30);
@@ -325,9 +351,13 @@ describe("editorStore: move respects the edit mode", () => {
   it("ignores a locked destination track and reports why", () => {
     const harness = setup({ clips: [{ kind: "video", startFrame: 0, durationFrames: 30 }] });
     const moving = harness.store.getState().document.clips[0]!;
-    const otherVideo = harness.store.getState().document.tracks.filter((track) => track.kind === "video")[1]!;
+    const otherVideo = harness.store
+      .getState()
+      .document.tracks.filter((track) => track.kind === "video")[1]!;
     harness.store.getState().updateTrack(otherVideo.id, { locked: true }, { coalesce: false });
-    harness.store.getState().moveClip(moving.id, 0, { toTrackId: otherVideo.id, disableSnap: true });
+    harness.store
+      .getState()
+      .moveClip(moving.id, 0, { toTrackId: otherVideo.id, disableSnap: true });
     expect(harness.store.getState().document.clips[0]!.trackId).toBe(moving.trackId);
     expect(harness.store.getState().lastError).toMatch(/locked/i);
   });
@@ -340,7 +370,9 @@ describe("editorStore: move respects the edit mode", () => {
       ],
       snap: false,
     });
-    const target = harness.store.getState().document.tracks.filter((track) => track.kind === "video")[1]!;
+    const target = harness.store
+      .getState()
+      .document.tracks.filter((track) => track.kind === "video")[1]!;
     const moving = harness.store.getState().document.clips.find((clip) => clip.id === "clp_a")!;
     expect(target.id).not.toBe(moving.trackId);
 
@@ -349,13 +381,20 @@ describe("editorStore: move respects the edit mode", () => {
     expect(moved.trackId).toBe(target.id);
     expect(moved.startFrame).toBe(10);
     // The destination track's own clip was cleared, not the source track's.
-    expect(harness.store.getState().document.clips.some((clip) => clip.trackId === target.id && clip.id !== moved.id)).toBe(false);
+    expect(
+      harness.store
+        .getState()
+        .document.clips.some((clip) => clip.trackId === target.id && clip.id !== moved.id),
+    ).toBe(false);
   });
 });
 
 describe("editorStore: undo and redo", () => {
   it("restores exact clip geometry across a multi-step edit", () => {
-    const harness = setup({ clips: [{ kind: "video", startFrame: 0, sourceInFrame: 0, durationFrames: 60 }], snap: false });
+    const harness = setup({
+      clips: [{ kind: "video", startFrame: 0, sourceInFrame: 0, durationFrames: 60 }],
+      snap: false,
+    });
     const { store } = harness;
     const original = structuredClone(store.getState().document.clips);
 
@@ -376,17 +415,33 @@ describe("editorStore: undo and redo", () => {
     store.getState().undo();
     expect(store.getState().document.clips).toEqual(afterMove);
     store.getState().undo();
-    expect(store.getState().document.clips.map((entry) => [entry.id, entry.startFrame, entry.sourceInFrame, entry.durationFrames])).toEqual(
-      afterSplit.map((entry) => [entry.id, entry.startFrame, entry.sourceInFrame, entry.durationFrames]),
+    expect(
+      store
+        .getState()
+        .document.clips.map((entry) => [
+          entry.id,
+          entry.startFrame,
+          entry.sourceInFrame,
+          entry.durationFrames,
+        ]),
+    ).toEqual(
+      afterSplit.map((entry) => [
+        entry.id,
+        entry.startFrame,
+        entry.sourceInFrame,
+        entry.durationFrames,
+      ]),
     );
     store.getState().undo();
     expect(store.getState().document.clips).toEqual(original);
     expect(store.getState().history.canUndo).toBe(false);
 
     store.getState().redo();
-    expect(store.getState().document.clips.map((entry) => [entry.id, entry.startFrame, entry.durationFrames])).toEqual(
-      afterSplit.map((entry) => [entry.id, entry.startFrame, entry.durationFrames]),
-    );
+    expect(
+      store
+        .getState()
+        .document.clips.map((entry) => [entry.id, entry.startFrame, entry.durationFrames]),
+    ).toEqual(afterSplit.map((entry) => [entry.id, entry.startFrame, entry.durationFrames]));
     store.getState().redo();
     store.getState().redo();
     expect(store.getState().document.clips).toEqual(afterTrim);
@@ -397,7 +452,9 @@ describe("editorStore: undo and redo", () => {
     const harness = setup({ clips: [{ kind: "video", startFrame: 0, durationFrames: 30 }] });
     const clip = harness.store.getState().document.clips[0]!;
     for (const opacity of [0.9, 0.8, 0.7]) {
-      harness.store.getState().setClipProperties(clip.id, { transform: { opacity } }, { coalesce: true });
+      harness.store
+        .getState()
+        .setClipProperties(clip.id, { transform: { opacity } }, { coalesce: true });
     }
     // `undoLabel` follows core's `History.state` convention: it names the snapshot that
     // `undo()` would travel back *to*, so three coalesced edits leave exactly one step whose
@@ -412,7 +469,9 @@ describe("editorStore: undo and redo", () => {
   it("keeps distinct labels as distinct undo steps", () => {
     const harness = setup({ clips: [{ kind: "video", startFrame: 0, durationFrames: 30 }] });
     const clip = harness.store.getState().document.clips[0]!;
-    harness.store.getState().setClipProperties(clip.id, { transform: { opacity: 0.5 } }, { coalesce: false });
+    harness.store
+      .getState()
+      .setClipProperties(clip.id, { transform: { opacity: 0.5 } }, { coalesce: false });
     harness.store.getState().trimClipEdge(clip.id, "end", 20, { coalesce: false });
     expect(harness.store.getState().history.depth).toBe(2);
     // Two distinct labels → two distinct undo steps, oldest first.
@@ -435,7 +494,9 @@ describe("editorStore: undo and redo", () => {
   });
 
   it("prunes selection entries that no longer exist after an undo", () => {
-    const harness = setup({ clips: [{ kind: "video", id: "clp_original", startFrame: 0, durationFrames: 60 }] });
+    const harness = setup({
+      clips: [{ kind: "video", id: "clp_original", startFrame: 0, durationFrames: 60 }],
+    });
     harness.store.getState().setPlayhead(30);
     harness.store.getState().splitAtPlayhead();
     expect(harness.store.getState().selection.size).toBe(2);
@@ -478,7 +539,9 @@ describe("editorStore: selection and delete", () => {
   it("never deletes a clip living on a locked track", () => {
     const harness = setup({ clips: [{ kind: "video", startFrame: 0, durationFrames: 30 }] });
     const clip = harness.store.getState().document.clips[0]!;
-    harness.store.getState().updateTrack(harness.videoTrackId, { locked: true }, { coalesce: false });
+    harness.store
+      .getState()
+      .updateTrack(harness.videoTrackId, { locked: true }, { coalesce: false });
     harness.store.getState().selectClips([clip.id]);
     harness.store.getState().deleteSelected();
     expect(harness.store.getState().document.clips).toHaveLength(1);
@@ -516,7 +579,9 @@ describe("editorStore: selection and delete", () => {
   });
 
   it("duplicates the selection immediately after the source clip's end", () => {
-    const harness = setup({ clips: [{ kind: "video", id: "clp_a", startFrame: 10, durationFrames: 25 }] });
+    const harness = setup({
+      clips: [{ kind: "video", id: "clp_a", startFrame: 10, durationFrames: 25 }],
+    });
     harness.store.getState().selectClips(["clp_a"]);
     harness.store.getState().duplicateSelected();
     const clips = harness.store.getState().document.clips;
@@ -528,7 +593,9 @@ describe("editorStore: selection and delete", () => {
   });
 
   it("toggles selection and clears it", () => {
-    const harness = setup({ clips: [{ kind: "video", id: "clp_a", startFrame: 0, durationFrames: 30 }] });
+    const harness = setup({
+      clips: [{ kind: "video", id: "clp_a", startFrame: 0, durationFrames: 30 }],
+    });
     harness.store.getState().toggleSelection("clp_a");
     expect(harness.store.getState().selection.has("clp_a")).toBe(true);
     harness.store.getState().toggleSelection("clp_a");
@@ -592,32 +659,43 @@ describe("editorStore: tracks", () => {
   it("refuses to exceed the per-kind track limit", () => {
     const harness = setup();
     for (let i = 0; i < 20; i += 1) harness.store.getState().addTrack("caption");
-    const captions = harness.store.getState().document.tracks.filter((track) => track.kind === "caption").length;
+    const captions = harness.store
+      .getState()
+      .document.tracks.filter((track) => track.kind === "caption").length;
     expect(captions).toBe(4);
     expect(harness.store.getState().lastError).toMatch(/limit/i);
   });
 
   it("refuses to remove the last track of a kind", () => {
     const harness = setup();
-    const caption = harness.store.getState().document.tracks.find((track) => track.kind === "caption")!;
+    const caption = harness.store
+      .getState()
+      .document.tracks.find((track) => track.kind === "caption")!;
     harness.store.getState().removeTrack(caption.id);
-    expect(harness.store.getState().document.tracks.some((track) => track.id === caption.id)).toBe(true);
+    expect(harness.store.getState().document.tracks.some((track) => track.id === caption.id)).toBe(
+      true,
+    );
     expect(harness.store.getState().lastError).toMatch(/last caption track/i);
   });
 
   it("reorders a track within its own kind only", () => {
     const harness = setup();
-    const videos = harness.store.getState().document.tracks.filter((track) => track.kind === "video");
+    const videos = harness.store
+      .getState()
+      .document.tracks.filter((track) => track.kind === "video");
     // FR-03 starts a project with three video tracks; moving V2 down swaps it with V3.
     expect(videos).toHaveLength(3);
     harness.store.getState().reorderTrack(videos[1]!.id, 1);
-    const after = harness.store.getState().document.tracks
-      .filter((track) => track.kind === "video")
+    const after = harness.store
+      .getState()
+      .document.tracks.filter((track) => track.kind === "video")
       .sort((a, b) => a.sortOrder - b.sortOrder);
     expect(after.map((track) => track.id)).toEqual([videos[0]!.id, videos[2]!.id, videos[1]!.id]);
     expect(after.map((track) => track.sortOrder)).toEqual([0, 1, 2]);
     // Audio/caption ordering is untouched by a video reorder.
-    expect(harness.store.getState().document.tracks.filter((track) => track.kind === "audio")).toHaveLength(4);
+    expect(
+      harness.store.getState().document.tracks.filter((track) => track.kind === "audio"),
+    ).toHaveLength(4);
   });
 
   it("closes gaps on a track", () => {
@@ -634,12 +712,20 @@ describe("editorStore: tracks", () => {
 
   it("updates track flags through the history stack", () => {
     const harness = setup();
-    harness.store.getState().updateTrack(harness.audioTrackId, { muted: true, solo: true }, { coalesce: false });
-    const track = harness.store.getState().document.tracks.find((candidate) => candidate.id === harness.audioTrackId)!;
+    harness.store
+      .getState()
+      .updateTrack(harness.audioTrackId, { muted: true, solo: true }, { coalesce: false });
+    const track = harness.store
+      .getState()
+      .document.tracks.find((candidate) => candidate.id === harness.audioTrackId)!;
     expect(track.muted).toBe(true);
     expect(track.solo).toBe(true);
     harness.store.getState().undo();
-    expect(harness.store.getState().document.tracks.find((candidate) => candidate.id === harness.audioTrackId)!.muted).toBe(false);
+    expect(
+      harness.store
+        .getState()
+        .document.tracks.find((candidate) => candidate.id === harness.audioTrackId)!.muted,
+    ).toBe(false);
   });
 });
 
@@ -677,7 +763,9 @@ describe("editorStore: snapping", () => {
       ],
     });
     harness.store.getState().moveClip("clp_a", 97, { disableSnap: false });
-    expect(harness.store.getState().document.clips.find((clip) => clip.id === "clp_a")!.startFrame).toBe(100);
+    expect(
+      harness.store.getState().document.clips.find((clip) => clip.id === "clp_a")!.startFrame,
+    ).toBe(100);
   });
 });
 

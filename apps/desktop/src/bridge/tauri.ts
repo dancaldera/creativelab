@@ -98,7 +98,10 @@ export class TauriStudioBridge implements StudioBridge {
     return this.call<ProjectPackageResponse>("project_package", { request });
   }
 
-  projectBackup(request: { workspacePath: string; label?: string }): Promise<{ destination: string; files: number }> {
+  projectBackup(request: {
+    workspacePath: string;
+    label?: string;
+  }): Promise<{ destination: string; files: number }> {
     return this.call<{ destination: string; files: number }>("project_backup", { request });
   }
 
@@ -118,7 +121,11 @@ export class TauriStudioBridge implements StudioBridge {
     return this.call<AssetImportResponse>("asset_import", { request });
   }
 
-  assetRelink(request: { workspacePath: string; assetId: string; newPath: string }): Promise<AssetDto> {
+  assetRelink(request: {
+    workspacePath: string;
+    assetId: string;
+    newPath: string;
+  }): Promise<AssetDto> {
     return this.call<AssetDto>("asset_relink", { request });
   }
 
@@ -205,7 +212,10 @@ export class TauriStudioBridge implements StudioBridge {
 
   // -- dialogs -------------------------------------------------------------
 
-  async dialogOpenFile(request: { multiple?: boolean; filters?: FileFilter[] }): Promise<DialogResultDto> {
+  async dialogOpenFile(request: {
+    multiple?: boolean;
+    filters?: FileFilter[];
+  }): Promise<DialogResultDto> {
     const selection = await openDialog({
       multiple: request.multiple ?? false,
       directory: false,
@@ -219,8 +229,14 @@ export class TauriStudioBridge implements StudioBridge {
     return normalizeDialogResult(selection);
   }
 
-  async dialogSaveFile(request: { defaultPath?: string; filters?: FileFilter[] }): Promise<DialogResultDto> {
-    const selection = await saveDialog({ defaultPath: request.defaultPath, filters: request.filters });
+  async dialogSaveFile(request: {
+    defaultPath?: string;
+    filters?: FileFilter[];
+  }): Promise<DialogResultDto> {
+    const selection = await saveDialog({
+      defaultPath: request.defaultPath,
+      filters: request.filters,
+    });
     return selection ? { paths: [selection], canceled: false } : { paths: [], canceled: true };
   }
 

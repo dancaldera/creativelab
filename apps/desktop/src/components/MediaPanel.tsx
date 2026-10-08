@@ -38,7 +38,8 @@ export function MediaPanel() {
     for (const asset of document.assets) {
       const probe = asset.probe ?? {};
       const assetTags = probe["tags"];
-      if (Array.isArray(assetTags)) for (const tag of assetTags) if (typeof tag === "string") set.add(tag);
+      if (Array.isArray(assetTags))
+        for (const tag of assetTags) if (typeof tag === "string") set.add(tag);
       set.add(asset.origin);
     }
     return [...set].sort();
@@ -67,11 +68,16 @@ export function MediaPanel() {
       if (list) list.push(asset);
       else byHash.set(asset.sha256, [asset]);
     }
-    return new Set([...byHash.values()].filter((list) => list.length > 1).flatMap((list) => list.map((asset) => asset.id)));
+    return new Set(
+      [...byHash.values()]
+        .filter((list) => list.length > 1)
+        .flatMap((list) => list.map((asset) => asset.id)),
+    );
   }, [document.assets]);
 
   const usedAssetIds = useMemo(
-    () => new Set(document.clips.map((clip) => clip.assetId).filter((id): id is string => Boolean(id))),
+    () =>
+      new Set(document.clips.map((clip) => clip.assetId).filter((id): id is string => Boolean(id))),
     [document.clips],
   );
 
@@ -95,13 +101,17 @@ export function MediaPanel() {
         response.errors.length > 0 ? "warn" : "info",
       );
     } catch (error) {
-      showToast(`Import failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+      showToast(
+        `Import failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   };
 
   const addToTimeline = (asset: Asset): void => {
     const state = useEditorStore.getState();
-    const kind = asset.mediaType === "audio" ? "audio" : asset.mediaType === "subtitle" ? "caption" : "video";
+    const kind =
+      asset.mediaType === "audio" ? "audio" : asset.mediaType === "subtitle" ? "caption" : "video";
     const track = state.document.tracks
       .filter((candidate) => candidate.kind === kind && !candidate.locked)
       .sort((a, b) => a.sortOrder - b.sortOrder)[0];
@@ -109,7 +119,8 @@ export function MediaPanel() {
       showToast(`No unlocked ${kind} track available.`, "warn");
       return;
     }
-    const fps = state.document.sequences.find((entry) => entry.isActive)?.fps ?? state.document.project.fps;
+    const fps =
+      state.document.sequences.find((entry) => entry.isActive)?.fps ?? state.document.project.fps;
     insertAssetAt(asset.id, state.playheadFrame, track.id, fps);
     void selectClips;
   };
@@ -129,10 +140,20 @@ export function MediaPanel() {
           </button>
           <div className="spacer" />
           <div className="row" role="group" aria-label="View mode">
-            <button type="button" className="chip" aria-pressed={view === "grid"} onClick={() => setView("grid")}>
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={view === "grid"}
+              onClick={() => setView("grid")}
+            >
               Grid
             </button>
-            <button type="button" className="chip" aria-pressed={view === "list"} onClick={() => setView("list")}>
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={view === "list"}
+              onClick={() => setView("list")}
+            >
               List
             </button>
           </div>
@@ -140,14 +161,20 @@ export function MediaPanel() {
 
         {workspacePath === null ? (
           <p className="callout callout--warning">
-            No project workspace is open. Create or open a project before importing media — imports are scoped to the approved workspace
-            path (PRD §13).
+            No project workspace is open. Create or open a project before importing media — imports
+            are scoped to the approved workspace path (PRD §13).
           </p>
         ) : null}
 
         <div className="filters" role="group" aria-label="Filter by media type">
           {(["all", "video", "image", "audio", "subtitle"] as const).map((type) => (
-            <button key={type} type="button" className="chip" aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>
+            <button
+              key={type}
+              type="button"
+              className="chip"
+              aria-pressed={typeFilter === type}
+              onClick={() => setTypeFilter(type)}
+            >
               {type}
             </button>
           ))}
@@ -185,8 +212,8 @@ export function MediaPanel() {
 
         {document.assets.length === 0 ? (
           <p className="empty">
-            The library is empty. Import footage or generate an asset; every result becomes a first-class library asset with its
-            provenance recorded.
+            The library is empty. Import footage or generate an asset; every result becomes a
+            first-class library asset with its provenance recorded.
           </p>
         ) : filtered.length === 0 ? (
           <p className="empty">No assets match the current filters.</p>
@@ -213,19 +240,30 @@ export function MediaPanel() {
                   <AssetThumb asset={asset} workspacePath={workspacePath} />
                   <div className="asset-card__meta">
                     <span className="asset-card__name" title={asset.relativePath ?? asset.uri}>
-                      {asset.relativePath?.split("/").pop() ?? asset.uri.split("/").pop() ?? asset.id}
+                      {asset.relativePath?.split("/").pop() ??
+                        asset.uri.split("/").pop() ??
+                        asset.id}
                     </span>
                     <span className="small muted">
                       {asset.mediaType}
                       {asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ""}
-                      {asset.durationFrames ? ` · ${formatDuration(framesToSecondsSafe(asset.durationFrames, asset.fps))}` : ""}
+                      {asset.durationFrames
+                        ? ` · ${formatDuration(framesToSecondsSafe(asset.durationFrames, asset.fps))}`
+                        : ""}
                       {asset.bytes ? ` · ${formatBytes(asset.bytes)}` : ""}
                     </span>
                     <div className="asset-card__tags">
                       <span className="tag">{asset.origin}</span>
                       <span className="tag">{asset.storageMode}</span>
                       {duplicates.has(asset.id) ? <span className="tag">duplicate</span> : null}
-                      {asset.missingAt ? <span className="tag" style={{ color: "var(--danger)", borderColor: "var(--danger)" }}>missing</span> : null}
+                      {asset.missingAt ? (
+                        <span
+                          className="tag"
+                          style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+                        >
+                          missing
+                        </span>
+                      ) : null}
                       {!usedAssetIds.has(asset.id) ? <span className="tag">unused</span> : null}
                       {clipsUsing > 1 ? <span className="tag">{clipsUsing} clips</span> : null}
                       {asset.generationJobId ? <span className="tag">AI</span> : null}
@@ -246,26 +284,34 @@ export function MediaPanel() {
             </div>
             <div className="dialog__body">
               <p className="small">
-                This choice is recorded per asset. PRD §9 makes copying the default; linking an original is an explicit advanced
-                choice.
+                This choice is recorded per asset. PRD §9 makes copying the default; linking an
+                original is an explicit advanced choice.
               </p>
-              <button type="button" className="model-option" onClick={() => void chooseAndImport("copy")}>
+              <button
+                type="button"
+                className="model-option"
+                onClick={() => void chooseAndImport("copy")}
+              >
                 <span>
                   <strong>Copy into the project</strong>
                   <br />
                   <span className="small muted">
-                    Media is copied under <code className="mono">assets/originals</code>. The project stays self-contained and offline;
-                    packaging always works.
+                    Media is copied under <code className="mono">assets/originals</code>. The
+                    project stays self-contained and offline; packaging always works.
                   </span>
                 </span>
               </button>
-              <button type="button" className="model-option" onClick={() => void chooseAndImport("link")}>
+              <button
+                type="button"
+                className="model-option"
+                onClick={() => void chooseAndImport("link")}
+              >
                 <span>
                   <strong>Link the originals</strong>
                   <br />
                   <span className="small muted">
-                    Files stay where they are and are referenced in place. Nothing is duplicated on disk, but the project breaks if the
-                    originals move or are deleted.
+                    Files stay where they are and are referenced in place. Nothing is duplicated on
+                    disk, but the project breaks if the originals move or are deleted.
                   </span>
                 </span>
               </button>

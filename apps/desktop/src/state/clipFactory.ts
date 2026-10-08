@@ -63,15 +63,26 @@ export function placeClip(document: EditorDocument, clip: Clip): EditorDocument 
   const start = clip.startFrame;
   const end = clipEnd(clip);
   const remaining = document.clips.filter(
-    (candidate) => !(candidate.trackId === clip.trackId && candidate.startFrame < end && clipEnd(candidate) > start),
+    (candidate) =>
+      !(
+        candidate.trackId === clip.trackId &&
+        candidate.startFrame < end &&
+        clipEnd(candidate) > start
+      ),
   );
   return { ...document, clips: sortClips([...remaining, clip]) };
 }
 
 /** The first unlocked track of a kind, in stack order — where an append lands. */
-export function defaultTrackFor(document: EditorDocument, kind: Track["kind"], preferredTrackId?: string | null): Track | undefined {
+export function defaultTrackFor(
+  document: EditorDocument,
+  kind: Track["kind"],
+  preferredTrackId?: string | null,
+): Track | undefined {
   if (preferredTrackId) {
-    const preferred = document.tracks.find((track) => track.id === preferredTrackId && track.kind === kind && !track.locked);
+    const preferred = document.tracks.find(
+      (track) => track.id === preferredTrackId && track.kind === kind && !track.locked,
+    );
     if (preferred) return preferred;
   }
   return document.tracks

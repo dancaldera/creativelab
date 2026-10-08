@@ -6,7 +6,12 @@
  * visibly indicate connectivity and credentials".
  */
 import { useEffect, useState } from "react";
-import { ASPECT_PRESETS_LOCAL, FRAME_RATE_PRESETS_LOCAL, formatTimecode, frameRateEquals } from "../state/coreOps";
+import {
+  ASPECT_PRESETS_LOCAL,
+  FRAME_RATE_PRESETS_LOCAL,
+  formatTimecode,
+  frameRateEquals,
+} from "../state/coreOps";
 import { useEditorStore } from "../state/editorStore";
 import { useUiStore } from "../state/uiStore";
 import { useJobsStore } from "../state/jobsStore";
@@ -55,7 +60,8 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
     setTitle(document.project.title);
   }, [document.project.title]);
 
-  const sequence = document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
+  const sequence =
+    document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
   const fps = sequence?.fps ?? document.project.fps;
   const aspect = ASPECT_PRESETS_LOCAL.find(
     (preset) =>
@@ -81,9 +87,21 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
     if (!preset) return;
     applyEdit(`Aspect ${preset.id}`, (current) => ({
       ...current,
-      project: { ...current.project, width: preset.width, height: preset.height, updatedAt: new Date().toISOString() },
+      project: {
+        ...current.project,
+        width: preset.width,
+        height: preset.height,
+        updatedAt: new Date().toISOString(),
+      },
       sequences: current.sequences.map((entry) =>
-        entry.isActive ? { ...entry, width: preset.width, height: preset.height, updatedAt: new Date().toISOString() } : entry,
+        entry.isActive
+          ? {
+              ...entry,
+              width: preset.width,
+              height: preset.height,
+              updatedAt: new Date().toISOString(),
+            }
+          : entry,
       ),
     }));
   };
@@ -95,7 +113,9 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
       ...current,
       project: { ...current.project, fps: preset.rate, updatedAt: new Date().toISOString() },
       sequences: current.sequences.map((entry) =>
-        entry.isActive ? { ...entry, fps: preset.rate, updatedAt: new Date().toISOString() } : entry,
+        entry.isActive
+          ? { ...entry, fps: preset.rate, updatedAt: new Date().toISOString() }
+          : entry,
       ),
     }));
   };
@@ -157,10 +177,21 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
         <button type="button" className="btn" onClick={onOpen} title="Open a project workspace">
           Open
         </button>
-        <button type="button" className="btn" onClick={onSave} disabled={saving} title="Save the project">
+        <button
+          type="button"
+          className="btn"
+          onClick={onSave}
+          disabled={saving}
+          title="Save the project"
+        >
           {saving ? "Saving…" : "Save"}
         </button>
-        <button type="button" className="btn" onClick={onPackage} title="Package the project with its media">
+        <button
+          type="button"
+          className="btn"
+          onClick={onPackage}
+          title="Package the project with its media"
+        >
           Package
         </button>
       </div>
@@ -184,7 +215,11 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
           onClick={redo}
           disabled={!history.canRedo}
           aria-label={history.redoLabel ? `Redo ${history.redoLabel}` : "Redo"}
-          title={history.redoLabel ? `Redo ${history.redoLabel} (Shift+Cmd/Ctrl+Z)` : "Redo (Shift+Cmd/Ctrl+Z)"}
+          title={
+            history.redoLabel
+              ? `Redo ${history.redoLabel} (Shift+Cmd/Ctrl+Z)`
+              : "Redo (Shift+Cmd/Ctrl+Z)"
+          }
         >
           ↷
         </button>
@@ -206,7 +241,11 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
           value={aspect?.id ?? ""}
           onChange={(event) => changeAspect(event.target.value)}
         >
-          {aspect ? null : <option value="">Custom {document.project.width}×{document.project.height}</option>}
+          {aspect ? null : (
+            <option value="">
+              Custom {document.project.width}×{document.project.height}
+            </option>
+          )}
           {ASPECT_PRESETS_LOCAL.map((preset) => (
             <option key={preset.id} value={preset.id}>
               {preset.label}
@@ -221,7 +260,9 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
           id="toolbar-fps"
           className="select"
           style={{ width: 132 }}
-          value={FRAME_RATE_PRESETS_LOCAL.find((preset) => frameRateEquals(preset.rate, fps))?.id ?? ""}
+          value={
+            FRAME_RATE_PRESETS_LOCAL.find((preset) => frameRateEquals(preset.rate, fps))?.id ?? ""
+          }
           onChange={(event) => changeFps(event.target.value)}
         >
           {FRAME_RATE_PRESETS_LOCAL.map((preset) => (
@@ -287,17 +328,30 @@ export function Toolbar({ onSave, onOpen, onPackage, saving, lastSavedAt }: Tool
         Generate
       </button>
 
-      <span className={`conn conn--${connectionTone}`} title={`Bridge: ${bridgeDescription()}. Credentials: ${credentialState}`}>
+      <span
+        className={`conn conn--${connectionTone}`}
+        title={`Bridge: ${bridgeDescription()}. Credentials: ${credentialState}`}
+      >
         <span className="conn__dot" aria-hidden="true" />
         <span>
           {bridgeKind === "tauri" ? "Native" : "Mock"} · {credentialState}
         </span>
       </span>
 
-      <button type="button" className="btn" onClick={() => setSettingsOpen(true)} aria-expanded={settingsOpen}>
+      <button
+        type="button"
+        className="btn"
+        onClick={() => setSettingsOpen(true)}
+        aria-expanded={settingsOpen}
+      >
         Settings
       </button>
-      <button type="button" className="btn btn--primary" onClick={() => setExportOpen(true)} aria-expanded={exportOpen}>
+      <button
+        type="button"
+        className="btn btn--primary"
+        onClick={() => setExportOpen(true)}
+        aria-expanded={exportOpen}
+      >
         Export
       </button>
 

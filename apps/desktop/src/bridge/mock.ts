@@ -63,7 +63,13 @@ import type {
   WorkspaceUsageRequest,
   WorkspaceUsageResponse,
 } from "./protocol";
-import { createInitialDocument, frameRateAsNumber, isoNow, newId, sequenceDurationFrames } from "../state/coreOps";
+import {
+  createInitialDocument,
+  frameRateAsNumber,
+  isoNow,
+  newId,
+  sequenceDurationFrames,
+} from "../state/coreOps";
 
 // ---------------------------------------------------------------------------
 // Seed helpers
@@ -552,7 +558,10 @@ export class MockStudioBridge implements StudioBridge {
     };
   }
 
-  async projectBackup(request: { workspacePath: string; label?: string }): Promise<{ destination: string; files: number }> {
+  async projectBackup(request: {
+    workspacePath: string;
+    label?: string;
+  }): Promise<{ destination: string; files: number }> {
     const label = request.label ?? "auto";
     return {
       destination: `${request.workspacePath}/backups/${label}-${Date.now()}.zip`,
@@ -563,7 +572,10 @@ export class MockStudioBridge implements StudioBridge {
   // -- workspace -----------------------------------------------------------
 
   async workspaceUsage(request: WorkspaceUsageRequest): Promise<WorkspaceUsageResponse> {
-    const assetBytes = (mockState.document?.assets ?? []).reduce((total, asset) => total + (asset.bytes ?? 0), 0);
+    const assetBytes = (mockState.document?.assets ?? []).reduce(
+      (total, asset) => total + (asset.bytes ?? 0),
+      0,
+    );
     const cacheBytes = 24_000_000 + mockState.proxyCount * 3_200_000;
     return {
       root: request.workspacePath,
@@ -571,10 +583,22 @@ export class MockStudioBridge implements StudioBridge {
       cacheBytes,
       cacheReclaimableBytes: Math.round(cacheBytes * 0.8),
       directories: [
-        { path: "assets/originals", bytes: Math.round(assetBytes * 0.6), files: Math.ceil(mockState.document?.assets.length ?? 0 / 2) },
-        { path: "assets/generated", bytes: Math.round(assetBytes * 0.4), files: Math.floor((mockState.document?.assets.length ?? 0) / 2) },
+        {
+          path: "assets/originals",
+          bytes: Math.round(assetBytes * 0.6),
+          files: Math.ceil(mockState.document?.assets.length ?? 0 / 2),
+        },
+        {
+          path: "assets/generated",
+          bytes: Math.round(assetBytes * 0.4),
+          files: Math.floor((mockState.document?.assets.length ?? 0) / 2),
+        },
         { path: "cache/proxies", bytes: Math.round(cacheBytes * 0.6), files: mockState.proxyCount },
-        { path: "cache/thumbnails", bytes: Math.round(cacheBytes * 0.25), files: 12 + mockState.proxyCount * 4 },
+        {
+          path: "cache/thumbnails",
+          bytes: Math.round(cacheBytes * 0.25),
+          files: 12 + mockState.proxyCount * 4,
+        },
         { path: "exports", bytes: 0, files: 0 },
       ],
     };
@@ -604,7 +628,13 @@ export class MockStudioBridge implements StudioBridge {
       const name = baseName(sourcePath);
       const fps = mediaType === "video" ? { num: 30, den: 1 } : null;
       const durationFrames =
-        mediaType === "video" ? 300 : mediaType === "audio" ? 240 : mediaType === "image" ? 150 : null;
+        mediaType === "video"
+          ? 300
+          : mediaType === "audio"
+            ? 240
+            : mediaType === "image"
+              ? 150
+              : null;
 
       const asset: Asset = {
         id: newId("asset"),
@@ -613,16 +643,35 @@ export class MockStudioBridge implements StudioBridge {
         storageMode: request.mode === "link" ? "linked" : "copied",
         uri: sourcePath,
         relativePath:
-          request.mode === "link" ? null : `assets/originals/${(document.assets.length + 1).toString().padStart(3, "0")}-${name}`,
+          request.mode === "link"
+            ? null
+            : `assets/originals/${(document.assets.length + 1).toString().padStart(3, "0")}-${name}`,
         sha256,
         bytes: 1_200_000 + (sha256.charCodeAt(0) % 40) * 250_000,
         durationFrames,
-        width: mediaType === "video" || mediaType === "image" ? (mediaType === "image" ? 1024 : 1920) : null,
-        height: mediaType === "video" || mediaType === "image" ? (mediaType === "image" ? 1024 : 1080) : null,
+        width:
+          mediaType === "video" || mediaType === "image"
+            ? mediaType === "image"
+              ? 1024
+              : 1920
+            : null,
+        height:
+          mediaType === "video" || mediaType === "image"
+            ? mediaType === "image"
+              ? 1024
+              : 1080
+            : null,
         sampleRate: mediaType === "audio" ? 48_000 : mediaType === "video" ? 48_000 : null,
         channels: mediaType === "audio" ? 2 : mediaType === "video" ? 2 : null,
         fps,
-        codec: mediaType === "video" ? "h264" : mediaType === "audio" ? "pcm_s16le" : mediaType === "image" ? "png" : null,
+        codec:
+          mediaType === "video"
+            ? "h264"
+            : mediaType === "audio"
+              ? "pcm_s16le"
+              : mediaType === "image"
+                ? "png"
+                : null,
         container: extensionOf(sourcePath) || null,
         origin: "imported",
         parentAssetId: null,
@@ -638,7 +687,8 @@ export class MockStudioBridge implements StudioBridge {
       imported.push({
         asset: toAssetDto(asset),
         duplicateOf: duplicate?.id ?? null,
-        warnings: request.mode === "link" ? ["Linked original: the project is not self-contained."] : [],
+        warnings:
+          request.mode === "link" ? ["Linked original: the project is not self-contained."] : [],
       });
     }
 
@@ -647,12 +697,22 @@ export class MockStudioBridge implements StudioBridge {
     return { imported, errors };
   }
 
-  async assetRelink(request: { workspacePath: string; assetId: string; newPath: string }): Promise<AssetDto> {
+  async assetRelink(request: {
+    workspacePath: string;
+    assetId: string;
+    newPath: string;
+  }): Promise<AssetDto> {
     const document = this.#requireDocument();
     const now = isoNow();
     const next = document.assets.map((asset) =>
       asset.id === request.assetId
-        ? { ...asset, uri: request.newPath, relativePath: `assets/originals/${baseName(request.newPath)}`, missingAt: null, updatedAt: now }
+        ? {
+            ...asset,
+            uri: request.newPath,
+            relativePath: `assets/originals/${baseName(request.newPath)}`,
+            missingAt: null,
+            updatedAt: now,
+          }
         : asset,
     );
     mockState.document = { ...document, assets: next };
@@ -665,7 +725,10 @@ export class MockStudioBridge implements StudioBridge {
     const document = this.#requireDocument();
     const asset = document.assets.find((candidate) => candidate.id === request.assetId);
     if (!asset) throw new Error(`Mock bridge: unknown asset ${request.assetId}`);
-    return toAssetDto({ ...asset, probe: { ...(asset.probe ?? {}), probedAt: isoNow(), mock: true } });
+    return toAssetDto({
+      ...asset,
+      probe: { ...(asset.probe ?? {}), probedAt: isoNow(), mock: true },
+    });
   }
 
   async assetDelete(request: { workspacePath: string; assetId: string }): Promise<void> {
@@ -673,7 +736,9 @@ export class MockStudioBridge implements StudioBridge {
     mockState.document = {
       ...document,
       assets: document.assets.filter((asset) => asset.id !== request.assetId),
-      clips: document.clips.map((clip) => (clip.assetId === request.assetId ? { ...clip, assetId: null } : clip)),
+      clips: document.clips.map((clip) =>
+        clip.assetId === request.assetId ? { ...clip, assetId: null } : clip,
+      ),
     };
     mockState.dirty = true;
   }
@@ -798,7 +863,11 @@ export class MockStudioBridge implements StudioBridge {
   async credentialTest(request: CredentialTestRequest): Promise<CredentialTestResponse> {
     const has = mockState.secrets.has(request.providerId);
     if (!has) {
-      return { ok: false, message: `No credential stored for ${request.providerId}.`, latencyMs: null };
+      return {
+        ok: false,
+        message: `No credential stored for ${request.providerId}.`,
+        latencyMs: null,
+      };
     }
     // A test never reveals the key, not even a prefix or its length.
     return { ok: true, message: `Credential for ${request.providerId} validated.`, latencyMs: 128 };
@@ -806,14 +875,18 @@ export class MockStudioBridge implements StudioBridge {
 
   // -- provider catalog ----------------------------------------------------
 
-  async providerListModels(request: ProviderListModelsRequest): Promise<ProviderListModelsResponse> {
-    const seed = MODEL_SEEDS.filter((model) => !request.providerId || model.providerId === request.providerId).map(
-      (model) => modelDto(model, mockState.catalogFetchedAt),
-    );
+  async providerListModels(
+    request: ProviderListModelsRequest,
+  ): Promise<ProviderListModelsResponse> {
+    const seed = MODEL_SEEDS.filter(
+      (model) => !request.providerId || model.providerId === request.providerId,
+    ).map((model) => modelDto(model, mockState.catalogFetchedAt));
     return { models: seed, fetchedAt: mockState.catalogFetchedAt, errors: [] };
   }
 
-  async providerCatalogRefresh(request: { providerId?: string }): Promise<ProviderListModelsResponse> {
+  async providerCatalogRefresh(request: {
+    providerId?: string;
+  }): Promise<ProviderListModelsResponse> {
     mockState.catalogFetchedAt = isoNow();
     return this.providerListModels({ providerId: request.providerId, refresh: true });
   }
@@ -822,7 +895,10 @@ export class MockStudioBridge implements StudioBridge {
 
   async jobList(request: JobListRequest): Promise<JobListResponse> {
     const jobs = [...mockState.jobs.values()]
-      .filter((job) => !request.status || request.status.length === 0 || request.status.includes(job.status))
+      .filter(
+        (job) =>
+          !request.status || request.status.length === 0 || request.status.includes(job.status),
+      )
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return { jobs: request.limit ? jobs.slice(0, request.limit) : jobs };
   }
@@ -859,14 +935,25 @@ export class MockStudioBridge implements StudioBridge {
     for (const job of mockState.jobs.values()) {
       if (job.status === "unknown") {
         if (job.providerJobId) resumed.push(job.id);
-        else needsAttention.push({ jobId: job.id, reason: "No provider job id recorded; acceptance and billing are unverified." });
+        else
+          needsAttention.push({
+            jobId: job.id,
+            reason: "No provider job id recorded; acceptance and billing are unverified.",
+          });
       }
     }
     return { needsAttention, resumed };
   }
 
   /** Test/UI affordance of the mock only: fabricate a job so the queue has something to show. */
-  seedJob(input: Partial<JobDto> & { providerId: string; modelId: string; modality: string; mode: string }): JobDto {
+  seedJob(
+    input: Partial<JobDto> & {
+      providerId: string;
+      modelId: string;
+      modality: string;
+      mode: string;
+    },
+  ): JobDto {
     const now = isoNow();
     const job: JobDto = {
       id: input.id ?? newId("job"),
@@ -891,7 +978,10 @@ export class MockStudioBridge implements StudioBridge {
 
   // -- dialogs -------------------------------------------------------------
 
-  async dialogOpenFile(request: { multiple?: boolean; filters?: FileFilter[] }): Promise<DialogResultDto> {
+  async dialogOpenFile(request: {
+    multiple?: boolean;
+    filters?: FileFilter[];
+  }): Promise<DialogResultDto> {
     void request;
     // The mock cannot show a native dialog, so it returns a plausible selection.
     return { paths: ["/Users/studio/footage/interview-take-03.mp4"], canceled: false };
@@ -903,13 +993,18 @@ export class MockStudioBridge implements StudioBridge {
   }
 
   async dialogSaveFile(request: { defaultPath?: string }): Promise<DialogResultDto> {
-    return { paths: [request.defaultPath ?? "/Users/studio/Movies/creativelab-export.mp4"], canceled: false };
+    return {
+      paths: [request.defaultPath ?? "/Users/studio/Movies/creativelab-export.mp4"],
+      canceled: false,
+    };
   }
 
   // -- settings ------------------------------------------------------------
 
   async settingsGet(request: SettingsGetRequest): Promise<SettingsGetResponse> {
-    return { value: mockState.settings.has(request.key) ? mockState.settings.get(request.key) : null };
+    return {
+      value: mockState.settings.has(request.key) ? mockState.settings.get(request.key) : null,
+    };
   }
 
   async settingsSet(request: SettingsSetRequest): Promise<void> {

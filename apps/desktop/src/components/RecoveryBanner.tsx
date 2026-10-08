@@ -28,7 +28,8 @@ export function RecoveryBanner({ offer, onRecover, onDiscard }: RecoveryBannerPr
     <div className="recovery" role="alert" aria-live="assertive">
       <span aria-hidden="true">⚠</span>
       <span>
-        Unsaved work was found — a {REASON_LABEL[offer.reason]} written {formatTimestamp(offer.writtenAt)}.
+        Unsaved work was found — a {REASON_LABEL[offer.reason]} written{" "}
+        {formatTimestamp(offer.writtenAt)}.
       </span>
       <code className="mono small" title={offer.snapshotPath}>
         {offer.snapshotPath.split("/").pop()}

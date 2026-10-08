@@ -22,14 +22,22 @@ export function Inspector() {
   const document = useEditorStore((state) => state.document);
   const selectionSize = useEditorStore((state) => state.selection.size);
   const setClipProperties = useEditorStore((state) => state.setClipProperties);
-  const sequence = document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
+  const sequence =
+    document.sequences.find((candidate) => candidate.isActive) ?? document.sequences[0];
   const fps = sequence?.fps ?? document.project.fps;
 
   const asset = useMemo(
-    () => (clip?.assetId ? document.assets.find((candidate) => candidate.id === clip.assetId) : undefined),
+    () =>
+      clip?.assetId
+        ? document.assets.find((candidate) => candidate.id === clip.assetId)
+        : undefined,
     [clip?.assetId, document.assets],
   );
-  const job = useJobsStore((state) => (asset?.generationJobId ? state.jobs.find((entry) => entry.id === asset.generationJobId) : undefined));
+  const job = useJobsStore((state) =>
+    asset?.generationJobId
+      ? state.jobs.find((entry) => entry.id === asset.generationJobId)
+      : undefined,
+  );
 
   if (!clip) {
     return (
@@ -94,7 +102,9 @@ export function Inspector() {
                 max={16}
                 value={speed.num}
                 aria-label="Speed numerator"
-                onChange={(event) => update({ speed: { num: Math.max(1, Number(event.target.value) || 1) } })}
+                onChange={(event) =>
+                  update({ speed: { num: Math.max(1, Number(event.target.value) || 1) } })
+                }
               />
               <span className="muted">/</span>
               <input
@@ -103,7 +113,9 @@ export function Inspector() {
                 max={16}
                 value={speed.den}
                 aria-label="Speed denominator"
-                onChange={(event) => update({ speed: { den: Math.max(1, Number(event.target.value) || 1) } })}
+                onChange={(event) =>
+                  update({ speed: { den: Math.max(1, Number(event.target.value) || 1) } })
+                }
               />
               <span className="small muted">{(speed.num / speed.den).toFixed(2)}x</span>
             </div>
@@ -251,7 +263,9 @@ export function Inspector() {
                 id={`${key}-${clip.id}`}
                 className="select"
                 value={clip.properties[key].kind}
-                onChange={(event) => update({ [key]: { kind: event.target.value as never } }, false)}
+                onChange={(event) =>
+                  update({ [key]: { kind: event.target.value as never } }, false)
+                }
               >
                 {TRANSITION_KINDS.map((kind) => (
                   <option key={kind} value={kind}>
@@ -265,7 +279,12 @@ export function Inspector() {
                 max={Math.max(1, clip.durationFrames)}
                 value={clip.properties[key].durationFrames}
                 aria-label={`${key === "transitionIn" ? "In" : "Out"} transition duration in frames`}
-                onChange={(event) => update({ [key]: { durationFrames: Math.max(0, Number(event.target.value) || 0) } }, false)}
+                onChange={(event) =>
+                  update(
+                    { [key]: { durationFrames: Math.max(0, Number(event.target.value) || 0) } },
+                    false,
+                  )
+                }
                 style={{ width: 72 }}
               />
             </div>
@@ -281,10 +300,12 @@ export function Inspector() {
             data with no effect on the pixels, and saying so plainly is required.
           */}
           <p className="callout callout--warning" role="note">
-            <strong>Clip effects and keyframes are not applied by the renderer yet.</strong> They are stored in the project and listed
-            below for reference only: the preview and the export graph ignore <code className="mono">effects</code> and{" "}
-            <code className="mono">keyframes</code> entirely today (FR-12 / Phase 4, tracked as an issue). Until that lands, adding one
-            would change nothing on screen or in the exported file.
+            <strong>Clip effects and keyframes are not applied by the renderer yet.</strong> They
+            are stored in the project and listed below for reference only: the preview and the
+            export graph ignore <code className="mono">effects</code> and{" "}
+            <code className="mono">keyframes</code> entirely today (FR-12 / Phase 4, tracked as an
+            issue). Until that lands, adding one would change nothing on screen or in the exported
+            file.
           </p>
           {document.effects.filter((effect) => effect.clipId === clip.id).length === 0 ? (
             <p className="small muted">No effects are recorded on this clip.</p>
@@ -300,16 +321,22 @@ export function Inspector() {
                       <div className="spacer" />
                       <span className="small muted mono">{JSON.stringify(effect.params)}</span>
                       <span className="badge">{effect.enabled ? "on" : "off"}</span>
-                      <span className="badge badge--warning" title="Stored, but not applied by preview or export">
+                      <span
+                        className="badge badge--warning"
+                        title="Stored, but not applied by preview or export"
+                      >
                         inert
                       </span>
                     </li>
                   ))}
               </ul>
               <p className="small muted">
-                These {document.effects.filter((effect) => effect.clipId === clip.id).length === 1 ? "entries were" : "entries were"} loaded
-                with the project (an importer, a template, or a future build) and are preserved on save so nothing is lost — they simply do
-                not render yet.
+                These{" "}
+                {document.effects.filter((effect) => effect.clipId === clip.id).length === 1
+                  ? "entries were"
+                  : "entries were"}{" "}
+                loaded with the project (an importer, a template, or a future build) and are
+                preserved on save so nothing is lost — they simply do not render yet.
               </p>
             </>
           )}
@@ -323,18 +350,22 @@ export function Inspector() {
             >
               Add effect…
             </button>
-            <span className="small muted">Disabled on purpose: this build cannot apply what it would author.</span>
+            <span className="small muted">
+              Disabled on purpose: this build cannot apply what it would author.
+            </span>
           </div>
           <p className="unsupported">
-            Editing effect parameters and authoring keyframes arrive with FR-12. Adding an authoring control before the render graph consumes
-            it would let the UI accept work the renderer silently drops.
+            Editing effect parameters and authoring keyframes arrive with FR-12. Adding an authoring
+            control before the render graph consumes it would let the UI accept work the renderer
+            silently drops.
           </p>
         </Section>
 
         <Section title="Blend mode">
           <p className="unsupported">
-            Blend modes are marked unsupported in this build. The schema has no blend field yet, and the render graph would need an
-            explicit compositor pass; showing a control that silently did nothing would violate PRD §8.
+            Blend modes are marked unsupported in this build. The schema has no blend field yet, and
+            the render graph would need an explicit compositor pass; showing a control that silently
+            did nothing would violate PRD §8.
           </p>
         </Section>
 
@@ -349,7 +380,9 @@ export function Inspector() {
                 <dt>Job state</dt>
                 <dd>
                   {job ? (
-                    <span className={`badge ${job.status === "failed" ? "badge--danger" : job.status === "completed" ? "badge--success" : ""}`}>
+                    <span
+                      className={`badge ${job.status === "failed" ? "badge--danger" : job.status === "completed" ? "badge--success" : ""}`}
+                    >
                       {job.status}
                     </span>
                   ) : (
@@ -375,12 +408,15 @@ export function Inspector() {
                 <dt>Parent</dt>
                 <dd className="mono">{asset?.parentAssetId ?? "—"}</dd>
               </dl>
-              <p className="provenance-prompt">{readProbeString(asset?.probe, "prompt") ?? "No prompt was recorded for this asset."}</p>
+              <p className="provenance-prompt">
+                {readProbeString(asset?.probe, "prompt") ??
+                  "No prompt was recorded for this asset."}
+              </p>
             </>
           ) : (
             <p className="small muted">
-              This clip references imported media, so it has no generation provenance. Imported assets keep their original path and
-              checksum instead.
+              This clip references imported media, so it has no generation provenance. Imported
+              assets keep their original path and checksum instead.
             </p>
           )}
         </Section>
@@ -402,7 +438,15 @@ const TRANSITION_KINDS = [
   "zoom-out",
 ] as const;
 
-function Section({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+function Section({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
   return (
     <details className="section" open={defaultOpen}>
       <summary className="section__header">{title}</summary>
@@ -453,12 +497,18 @@ function NumberSlider({ id, label, value, min, max, step, onChange }: NumberSlid
   );
 }
 
-function readProbeString(probe: Record<string, unknown> | null | undefined, key: string): string | null {
+function readProbeString(
+  probe: Record<string, unknown> | null | undefined,
+  key: string,
+): string | null {
   const value = probe?.[key];
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function readProbeNumber(probe: Record<string, unknown> | null | undefined, key: string): number | null {
+function readProbeNumber(
+  probe: Record<string, unknown> | null | undefined,
+  key: string,
+): number | null {
   const value = probe?.[key];
   return typeof value === "number" ? value : null;
 }

@@ -33,8 +33,15 @@ export const queryKeys = {
   recentProjects: ["projects", "recent"] as const,
   renderStatus: (exportJobId: string | null) => ["render-status", exportJobId] as const,
   thumbnail: (request: MediaThumbnailRequest | null) =>
-    ["thumbnail", request?.workspacePath, request?.assetId, request?.atSeconds, request?.width] as const,
-  waveform: (request: MediaWaveformRequest | null) => ["waveform", request?.workspacePath, request?.assetId, request?.buckets] as const,
+    [
+      "thumbnail",
+      request?.workspacePath,
+      request?.assetId,
+      request?.atSeconds,
+      request?.width,
+    ] as const,
+  waveform: (request: MediaWaveformRequest | null) =>
+    ["waveform", request?.workspacePath, request?.assetId, request?.buckets] as const,
 } as const;
 
 /** Workspace path of the open project; `null` before a project exists. */
@@ -60,7 +67,12 @@ export function useJobs(statuses: readonly string[] = [], enabled = true) {
   const workspacePath = useWorkspacePath();
   return useQuery({
     queryKey: queryKeys.jobs(workspacePath, statuses),
-    queryFn: async () => getBridge().jobList({ workspacePath: workspacePath ?? "", status: [...statuses], limit: 100 }),
+    queryFn: async () =>
+      getBridge().jobList({
+        workspacePath: workspacePath ?? "",
+        status: [...statuses],
+        limit: 100,
+      }),
     enabled: enabled && workspacePath !== null,
     staleTime: 2_000,
     refetchInterval: 3_000,
@@ -107,7 +119,9 @@ export function useWorkspaceUsage(enabled = true) {
   return useQuery({
     queryKey: queryKeys.workspaceUsage(workspacePath),
     queryFn: async () =>
-      getBridge().workspaceUsage({ workspacePath: workspacePath ?? "" } satisfies WorkspaceUsageRequest),
+      getBridge().workspaceUsage({
+        workspacePath: workspacePath ?? "",
+      } satisfies WorkspaceUsageRequest),
     enabled: enabled && workspacePath !== null,
     staleTime: 15_000,
   });
@@ -135,7 +149,10 @@ export function useRenderStatus(exportJobId: string | null, enabled = true) {
   return useQuery({
     queryKey: queryKeys.renderStatus(exportJobId),
     queryFn: async () =>
-      getBridge().renderStatus({ workspacePath: workspacePath ?? "", exportJobId: exportJobId ?? "" }),
+      getBridge().renderStatus({
+        workspacePath: workspacePath ?? "",
+        exportJobId: exportJobId ?? "",
+      }),
     enabled: enabled && exportJobId !== null,
     staleTime: 0,
     refetchInterval: 700,
@@ -228,7 +245,8 @@ export function usePurgeCaches() {
   const queryClient = useQueryClient();
   const workspacePath = useWorkspacePath();
   return useMutation({
-    mutationFn: async () => getBridge().workspacePurgeCaches({ workspacePath: workspacePath ?? "" }),
+    mutationFn: async () =>
+      getBridge().workspacePurgeCaches({ workspacePath: workspacePath ?? "" }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspace-usage"] });
     },
@@ -285,7 +303,8 @@ export function useCancelJob() {
   const queryClient = useQueryClient();
   const workspacePath = useWorkspacePath();
   return useMutation({
-    mutationFn: async (jobId: string) => getBridge().jobCancel({ workspacePath: workspacePath ?? "", jobId }),
+    mutationFn: async (jobId: string) =>
+      getBridge().jobCancel({ workspacePath: workspacePath ?? "", jobId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
     },
@@ -296,7 +315,8 @@ export function useRetryJob() {
   const queryClient = useQueryClient();
   const workspacePath = useWorkspacePath();
   return useMutation({
-    mutationFn: async (jobId: string) => getBridge().jobRetry({ workspacePath: workspacePath ?? "", jobId }),
+    mutationFn: async (jobId: string) =>
+      getBridge().jobRetry({ workspacePath: workspacePath ?? "", jobId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["jobs"] });
     },

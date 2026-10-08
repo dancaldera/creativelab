@@ -36,16 +36,24 @@ export class AppErrorBoundary extends Component<Props, State> {
       <div className="error-boundary" role="alert">
         <h1 style={{ marginTop: 0 }}>Something went wrong in the editor</h1>
         <p>
-          The project document is untouched — edits are only committed through the undo stack, and an autosave snapshot is written by the
-          native side.
+          The project document is untouched — edits are only committed through the undo stack, and
+          an autosave snapshot is written by the native side.
         </p>
         <pre>{error.message}</pre>
         {componentStack ? <pre>{componentStack.trim()}</pre> : null}
         <div className="row" style={{ marginTop: 12 }}>
-          <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => window.location.reload()}
+          >
             Reload the editor
           </button>
-          <button type="button" className="btn" onClick={() => this.setState({ error: null, componentStack: null })}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => this.setState({ error: null, componentStack: null })}
+          >
             Try to continue
           </button>
         </div>

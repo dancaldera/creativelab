@@ -9,7 +9,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { StudioBridge } from "./protocol";
 import { IPC_COMMANDS } from "./protocol";
-import { MockStudioBridge, advanceMockRenderClock, buildPeaks, buildThumbnailDataUri, resetMockState } from "./mock";
+import {
+  MockStudioBridge,
+  advanceMockRenderClock,
+  buildPeaks,
+  buildThumbnailDataUri,
+  resetMockState,
+} from "./mock";
 
 const SECRET = "sk-live-DO-NOT-LEAK-9f8e7d6c5b4a";
 const WORKSPACE = "/Users/studio/CreativeLab/Mock Test";
@@ -90,8 +96,18 @@ describe("MockStudioBridge: project lifecycle", () => {
   });
 
   it("keeps state across bridge calls (the singleton survives re-renders)", async () => {
-    await bridge.projectCreate({ title: "A", fps: { num: 25, den: 1 }, width: 1920, height: 1080, workspacePath: WORKSPACE });
-    await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/clip.mp4"], mode: "copy" });
+    await bridge.projectCreate({
+      title: "A",
+      fps: { num: 25, den: 1 },
+      width: 1920,
+      height: 1080,
+      workspacePath: WORKSPACE,
+    });
+    await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/clip.mp4"],
+      mode: "copy",
+    });
     // A *second* bridge instance is what `getBridge()` would return after a hot reload.
     const second = new MockStudioBridge();
     const session = await second.projectOpen({ workspacePath: WORKSPACE });
@@ -114,7 +130,13 @@ describe("MockStudioBridge: project lifecycle", () => {
   });
 
   it("lists the project it just created as recent", async () => {
-    await bridge.projectCreate({ title: "Recent", fps: { num: 30, den: 1 }, width: 1920, height: 1080, workspacePath: WORKSPACE });
+    await bridge.projectCreate({
+      title: "Recent",
+      fps: { num: 30, den: 1 },
+      width: 1920,
+      height: 1080,
+      workspacePath: WORKSPACE,
+    });
     const recent = await bridge.projectListRecent();
     expect(recent).toHaveLength(1);
     expect(recent[0]!.title).toBe("Recent");
@@ -122,13 +144,21 @@ describe("MockStudioBridge: project lifecycle", () => {
   });
 
   it("refuses to save or import before a project exists", async () => {
-    await expect(bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/a.mp4"], mode: "copy" })).rejects.toThrow(/create or open/i);
+    await expect(
+      bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/a.mp4"], mode: "copy" }),
+    ).rejects.toThrow(/create or open/i);
   });
 });
 
 describe("MockStudioBridge: asset import", () => {
   beforeEach(async () => {
-    await bridge.projectCreate({ title: "Import", fps: { num: 30, den: 1 }, width: 1920, height: 1080, workspacePath: WORKSPACE });
+    await bridge.projectCreate({
+      title: "Import",
+      fps: { num: 30, den: 1 },
+      width: 1920,
+      height: 1080,
+      workspacePath: WORKSPACE,
+    });
   });
 
   it("imports a synthetic asset with probed-looking metadata", async () => {
@@ -157,17 +187,34 @@ describe("MockStudioBridge: asset import", () => {
       sourcePaths: ["/tmp/a.png", "/tmp/b.wav", "/tmp/c.srt", "/tmp/d.mov"],
       mode: "copy",
     });
-    expect(response.imported.map((entry) => entry.asset.mediaType)).toEqual(["image", "audio", "subtitle", "video"]);
+    expect(response.imported.map((entry) => entry.asset.mediaType)).toEqual([
+      "image",
+      "audio",
+      "subtitle",
+      "video",
+    ]);
   });
 
   it("detects a duplicate by content hash (FR-02)", async () => {
-    const first = await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/same.mp4"], mode: "copy" });
-    const second = await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/same.mp4"], mode: "copy" });
+    const first = await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/same.mp4"],
+      mode: "copy",
+    });
+    const second = await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/same.mp4"],
+      mode: "copy",
+    });
     expect(second.imported[0]!.duplicateOf).toBe(first.imported[0]!.asset.id);
   });
 
   it("records an explicit link mode and warns that the project is not portable", async () => {
-    const response = await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/linked.mp4"], mode: "link" });
+    const response = await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/linked.mp4"],
+      mode: "link",
+    });
     expect(response.imported[0]!.asset.storageMode).toBe("linked");
     expect(response.imported[0]!.asset.relativePath).toBeNull();
     expect(response.imported[0]!.warnings.join(" ")).toMatch(/not self-contained/i);
@@ -178,7 +225,11 @@ describe("MockStudioBridge: asset import", () => {
   });
 
   it("exposes imported assets through a later projectOpen", async () => {
-    await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/one.mp4", "/tmp/two.mp4"], mode: "copy" });
+    await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/one.mp4", "/tmp/two.mp4"],
+      mode: "copy",
+    });
     const session = await bridge.projectOpen({ workspacePath: WORKSPACE });
     expect(session.document.assets).toHaveLength(2);
   });
@@ -188,13 +239,28 @@ describe("MockStudioBridge: derived media", () => {
   let assetId: string;
 
   beforeEach(async () => {
-    await bridge.projectCreate({ title: "Media", fps: { num: 30, den: 1 }, width: 1920, height: 1080, workspacePath: WORKSPACE });
-    const imported = await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/take.mp4"], mode: "copy" });
+    await bridge.projectCreate({
+      title: "Media",
+      fps: { num: 30, den: 1 },
+      width: 1920,
+      height: 1080,
+      workspacePath: WORKSPACE,
+    });
+    const imported = await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/take.mp4"],
+      mode: "copy",
+    });
     assetId = imported.imported[0]!.asset.id;
   });
 
   it("returns a resolvable thumbnail without touching the filesystem", async () => {
-    const thumbnail = await bridge.mediaThumbnail({ workspacePath: WORKSPACE, assetId, atSeconds: 1.5, width: 160 });
+    const thumbnail = await bridge.mediaThumbnail({
+      workspacePath: WORKSPACE,
+      assetId,
+      atSeconds: 1.5,
+      width: 160,
+    });
     // In a DOM (webview/browser) this is a PNG data URI; in the node test run the canvas is
     // unavailable and the generator falls back to a 1x1 transparent PNG — still resolvable.
     expect(thumbnail.relativePath.startsWith("data:image/png;base64,")).toBe(true);
@@ -223,7 +289,11 @@ describe("MockStudioBridge: derived media", () => {
   });
 
   it("clamps the bucket count instead of allocating an unbounded array", async () => {
-    const huge = await bridge.mediaWaveform({ workspacePath: WORKSPACE, assetId, buckets: 1_000_000 });
+    const huge = await bridge.mediaWaveform({
+      workspacePath: WORKSPACE,
+      assetId,
+      buckets: 1_000_000,
+    });
     expect(huge.buckets).toBe(2048);
     const tiny = await bridge.mediaWaveform({ workspacePath: WORKSPACE, assetId, buckets: 0 });
     expect(tiny.buckets).toBe(1);
@@ -235,24 +305,55 @@ describe("MockStudioBridge: derived media", () => {
     expect(proxy.height).toBe(540);
     expect(proxy.relativePath).toContain("cache/proxies/");
 
-    const relinked = await bridge.assetRelink({ workspacePath: WORKSPACE, assetId, newPath: "/Volumes/Raid/take.mp4" });
+    const relinked = await bridge.assetRelink({
+      workspacePath: WORKSPACE,
+      assetId,
+      newPath: "/Volumes/Raid/take.mp4",
+    });
     expect(relinked.uri).toBe("/Volumes/Raid/take.mp4");
     expect(relinked.missingAt).toBeNull();
   });
 
   it("rejects unknown asset ids rather than inventing a result", async () => {
-    await expect(bridge.mediaThumbnail({ workspacePath: WORKSPACE, assetId: "ast_missing", atSeconds: 0, width: 64 })).rejects.toThrow(/unknown asset/i);
+    await expect(
+      bridge.mediaThumbnail({
+        workspacePath: WORKSPACE,
+        assetId: "ast_missing",
+        atSeconds: 0,
+        width: 64,
+      }),
+    ).rejects.toThrow(/unknown asset/i);
   });
 });
 
 describe("MockStudioBridge: jobs and render progress", () => {
   beforeEach(async () => {
-    await bridge.projectCreate({ title: "Jobs", fps: { num: 30, den: 1 }, width: 1920, height: 1080, workspacePath: WORKSPACE });
+    await bridge.projectCreate({
+      title: "Jobs",
+      fps: { num: 30, den: 1 },
+      width: 1920,
+      height: 1080,
+      workspacePath: WORKSPACE,
+    });
   });
 
   it("lists jobs filtered by status, newest first", async () => {
-    bridge.seedJob({ providerId: "vercel-gateway", modelId: "m/a", modality: "video", mode: "text-to-video", status: "running", createdAt: "2026-01-01T00:00:00.000Z" });
-    bridge.seedJob({ providerId: "elevenlabs", modelId: "m/b", modality: "audio", mode: "tts", status: "failed", createdAt: "2026-01-02T00:00:00.000Z" });
+    bridge.seedJob({
+      providerId: "vercel-gateway",
+      modelId: "m/a",
+      modality: "video",
+      mode: "text-to-video",
+      status: "running",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    bridge.seedJob({
+      providerId: "elevenlabs",
+      modelId: "m/b",
+      modality: "audio",
+      mode: "tts",
+      status: "failed",
+      createdAt: "2026-01-02T00:00:00.000Z",
+    });
 
     const all = await bridge.jobList({ workspacePath: WORKSPACE });
     expect(all.jobs).toHaveLength(2);
@@ -266,28 +367,65 @@ describe("MockStudioBridge: jobs and render progress", () => {
   });
 
   it("cancels a running job and refuses to cancel a finished one", async () => {
-    const job = bridge.seedJob({ providerId: "p", modelId: "m", modality: "image", mode: "text-to-image", status: "running" });
+    const job = bridge.seedJob({
+      providerId: "p",
+      modelId: "m",
+      modality: "image",
+      mode: "text-to-image",
+      status: "running",
+    });
     await bridge.jobCancel({ workspacePath: WORKSPACE, jobId: job.id });
     const after = await bridge.jobList({ workspacePath: WORKSPACE });
     expect(after.jobs[0]!.status).toBe("canceled");
-    await expect(bridge.jobCancel({ workspacePath: WORKSPACE, jobId: job.id })).rejects.toThrow(/already canceled/i);
+    await expect(bridge.jobCancel({ workspacePath: WORKSPACE, jobId: job.id })).rejects.toThrow(
+      /already canceled/i,
+    );
   });
 
   it("retries only failed jobs and bumps the attempt counter", async () => {
-    const failed = bridge.seedJob({ providerId: "p", modelId: "m", modality: "video", mode: "text-to-video", status: "failed", retryCount: 1 });
+    const failed = bridge.seedJob({
+      providerId: "p",
+      modelId: "m",
+      modality: "video",
+      mode: "text-to-video",
+      status: "failed",
+      retryCount: 1,
+    });
     await bridge.jobRetry({ workspacePath: WORKSPACE, jobId: failed.id });
     const [retried] = (await bridge.jobList({ workspacePath: WORKSPACE })).jobs;
     expect(retried!.status).toBe("queued");
     expect(retried!.retryCount).toBe(2);
     expect(retried!.error).toBeNull();
 
-    const running = bridge.seedJob({ providerId: "p", modelId: "m2", modality: "video", mode: "text-to-video", status: "running" });
-    await expect(bridge.jobRetry({ workspacePath: WORKSPACE, jobId: running.id })).rejects.toThrow(/only failed/i);
+    const running = bridge.seedJob({
+      providerId: "p",
+      modelId: "m2",
+      modality: "video",
+      mode: "text-to-video",
+      status: "running",
+    });
+    await expect(bridge.jobRetry({ workspacePath: WORKSPACE, jobId: running.id })).rejects.toThrow(
+      /only failed/i,
+    );
   });
 
   it("parks an unknown job with no provider id for a human decision and never resubmits it", async () => {
-    bridge.seedJob({ providerId: "p", modelId: "m1", modality: "video", mode: "text-to-video", status: "unknown", providerJobId: null });
-    bridge.seedJob({ providerId: "p", modelId: "m2", modality: "video", mode: "text-to-video", status: "unknown", providerJobId: "remote-42" });
+    bridge.seedJob({
+      providerId: "p",
+      modelId: "m1",
+      modality: "video",
+      mode: "text-to-video",
+      status: "unknown",
+      providerJobId: null,
+    });
+    bridge.seedJob({
+      providerId: "p",
+      modelId: "m2",
+      modality: "video",
+      mode: "text-to-video",
+      status: "unknown",
+      providerJobId: "remote-42",
+    });
 
     const reconcile = await bridge.jobReconcile({ workspacePath: WORKSPACE });
     expect(reconcile.needsAttention).toHaveLength(1);
@@ -296,7 +434,11 @@ describe("MockStudioBridge: jobs and render progress", () => {
   });
 
   it("reports monotonically increasing render progress up to completion", async () => {
-    const imported = await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/r.mp4"], mode: "copy" });
+    const imported = await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/r.mp4"],
+      mode: "copy",
+    });
     void imported;
     const session = await bridge.projectOpen({ workspacePath: WORKSPACE });
     const sequenceId = session.document.sequences[0]!.id;
@@ -310,7 +452,10 @@ describe("MockStudioBridge: jobs and render progress", () => {
     });
     expect(started.totalFrames).toBeGreaterThan(0);
 
-    const first = await bridge.renderStatus({ workspacePath: WORKSPACE, exportJobId: started.exportJobId });
+    const first = await bridge.renderStatus({
+      workspacePath: WORKSPACE,
+      exportJobId: started.exportJobId,
+    });
     expect(["preparing", "rendering", "finalizing", "completed"]).toContain(first.status);
     expect(first.progress).toBeGreaterThanOrEqual(0);
     expect(first.logTail.join("\n")).toContain("ffmpeg version");
@@ -319,14 +464,20 @@ describe("MockStudioBridge: jobs and render progress", () => {
     // Progress is derived from elapsed time, so moving the recorded start time into the past
     // is a deterministic way to prove it actually advances without sleeping in the test.
     advanceMockRenderClock(started.exportJobId, 10_000);
-    const later = await bridge.renderStatus({ workspacePath: WORKSPACE, exportJobId: started.exportJobId });
+    const later = await bridge.renderStatus({
+      workspacePath: WORKSPACE,
+      exportJobId: started.exportJobId,
+    });
     expect(later.progress).toBeGreaterThan(first.progress);
     expect(later.renderedFrames).toBeGreaterThan(first.renderedFrames);
     expect(later.renderedFrames).toBeLessThanOrEqual(later.totalFrames);
 
     // Push well past the simulated render duration: it must reach a terminal state and clamp.
     advanceMockRenderClock(started.exportJobId, 10 * 60_000);
-    const done = await bridge.renderStatus({ workspacePath: WORKSPACE, exportJobId: started.exportJobId });
+    const done = await bridge.renderStatus({
+      workspacePath: WORKSPACE,
+      exportJobId: started.exportJobId,
+    });
     expect(done.status).toBe("completed");
     expect(done.progress).toBe(1);
     expect(done.renderedFrames).toBe(done.totalFrames);
@@ -342,13 +493,18 @@ describe("MockStudioBridge: jobs and render progress", () => {
       outputPath: `${WORKSPACE}/exports/cancel.mp4`,
     });
     await bridge.renderCancel({ exportJobId: started.exportJobId });
-    const status = await bridge.renderStatus({ workspacePath: WORKSPACE, exportJobId: started.exportJobId });
+    const status = await bridge.renderStatus({
+      workspacePath: WORKSPACE,
+      exportJobId: started.exportJobId,
+    });
     expect(status.status).toBe("canceled");
     expect(status.errors).toHaveLength(0);
   });
 
   it("rejects an unknown export job id", async () => {
-    await expect(bridge.renderStatus({ workspacePath: WORKSPACE, exportJobId: "exp_nope" })).rejects.toThrow(/unknown export job/i);
+    await expect(
+      bridge.renderStatus({ workspacePath: WORKSPACE, exportJobId: "exp_nope" }),
+    ).rejects.toThrow(/unknown export job/i);
   });
 });
 
@@ -381,7 +537,11 @@ describe("MockStudioBridge: settings round-trip", () => {
   it("returns null for an unknown key and the stored value afterwards", async () => {
     expect((await bridge.settingsGet({ key: "ui.workspace.v1" })).value).toBeNull();
 
-    const payload = { activePanel: "generate", sizes: { leftRail: 300, inspector: 360, timeline: 280 }, layouts: [] };
+    const payload = {
+      activePanel: "generate",
+      sizes: { leftRail: 300, inspector: 360, timeline: 280 },
+      layouts: [],
+    };
     await bridge.settingsSet({ key: "ui.workspace.v1", value: payload });
     expect((await bridge.settingsGet({ key: "ui.workspace.v1" })).value).toEqual(payload);
   });
@@ -409,7 +569,13 @@ describe("MockStudioBridge: credentials never leak the secret", () => {
 
     const list = await bridge.credentialList();
     expect(JSON.stringify(list)).not.toContain(SECRET);
-    expect(list).toEqual([{ providerId: "elevenlabs", credentialRef: "keychain://creativelab/elevenlabs", hasSecret: true }]);
+    expect(list).toEqual([
+      {
+        providerId: "elevenlabs",
+        credentialRef: "keychain://creativelab/elevenlabs",
+        hasSecret: true,
+      },
+    ]);
     for (const entry of list) {
       expect(Object.keys(entry).sort()).toEqual(["credentialRef", "hasSecret", "providerId"]);
     }
@@ -454,9 +620,23 @@ describe("MockStudioBridge: credentials never leak the secret", () => {
 
 describe("MockStudioBridge: workspace usage and dialogs", () => {
   it("reports cache bytes as reclaimable and shrinks them after a purge", async () => {
-    await bridge.projectCreate({ title: "Usage", fps: { num: 30, den: 1 }, width: 1920, height: 1080, workspacePath: WORKSPACE });
-    const imported = await bridge.assetImport({ workspacePath: WORKSPACE, sourcePaths: ["/tmp/u.mp4"], mode: "copy" });
-    await bridge.mediaProxy({ workspacePath: WORKSPACE, assetId: imported.imported[0]!.asset.id, maxWidth: 1280 });
+    await bridge.projectCreate({
+      title: "Usage",
+      fps: { num: 30, den: 1 },
+      width: 1920,
+      height: 1080,
+      workspacePath: WORKSPACE,
+    });
+    const imported = await bridge.assetImport({
+      workspacePath: WORKSPACE,
+      sourcePaths: ["/tmp/u.mp4"],
+      mode: "copy",
+    });
+    await bridge.mediaProxy({
+      workspacePath: WORKSPACE,
+      assetId: imported.imported[0]!.asset.id,
+      maxWidth: 1280,
+    });
 
     const usage = await bridge.workspaceUsage({ workspacePath: WORKSPACE });
     expect(usage.root).toBe(WORKSPACE);
@@ -482,7 +662,13 @@ describe("MockStudioBridge: workspace usage and dialogs", () => {
   });
 
   it("backs up the project with a labelled destination", async () => {
-    await bridge.projectCreate({ title: "Backup", fps: { num: 30, den: 1 }, width: 1920, height: 1080, workspacePath: WORKSPACE });
+    await bridge.projectCreate({
+      title: "Backup",
+      fps: { num: 30, den: 1 },
+      width: 1920,
+      height: 1080,
+      workspacePath: WORKSPACE,
+    });
     const backup = await bridge.projectBackup({ workspacePath: WORKSPACE, label: "manual" });
     expect(backup.destination).toContain("/backups/manual-");
     expect(backup.files).toBeGreaterThan(0);

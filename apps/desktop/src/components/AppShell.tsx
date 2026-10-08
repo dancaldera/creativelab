@@ -22,13 +22,18 @@ export function AppShell({ toolbar, rail, preview, inspector, timeline }: AppShe
   const sizes = useUiStore((state) => state.sizes);
   const setSize = useUiStore((state) => state.setSize);
   const togglePanel = useUiStore((state) => state.togglePanel);
-  const dragRef = useRef<{ panel: "leftRail" | "inspector" | "timeline"; start: number; origin: number } | null>(null);
+  const dragRef = useRef<{
+    panel: "leftRail" | "inspector" | "timeline";
+    start: number;
+    origin: number;
+  } | null>(null);
 
   const onPointerMove = useCallback(
     (event: PointerEvent) => {
       const drag = dragRef.current;
       if (!drag) return;
-      const delta = drag.panel === "timeline" ? drag.start - event.clientY : event.clientX - drag.start;
+      const delta =
+        drag.panel === "timeline" ? drag.start - event.clientY : event.clientX - drag.start;
       setSize(drag.panel, drag.origin + delta);
     },
     [setSize],
@@ -48,12 +53,22 @@ export function AppShell({ toolbar, rail, preview, inspector, timeline }: AppShe
     };
   }, [onPointerMove, stopDrag]);
 
-  const beginDrag = (panel: "leftRail" | "inspector" | "timeline", event: React.PointerEvent<HTMLDivElement>): void => {
-    dragRef.current = { panel, start: panel === "timeline" ? event.clientY : event.clientX, origin: sizes[panel] };
+  const beginDrag = (
+    panel: "leftRail" | "inspector" | "timeline",
+    event: React.PointerEvent<HTMLDivElement>,
+  ): void => {
+    dragRef.current = {
+      panel,
+      start: panel === "timeline" ? event.clientY : event.clientX,
+      origin: sizes[panel],
+    };
     document.body.style.cursor = panel === "timeline" ? "row-resize" : "col-resize";
   };
 
-  const onSplitterKeyDown = (panel: "leftRail" | "inspector" | "timeline", event: React.KeyboardEvent<HTMLDivElement>): void => {
+  const onSplitterKeyDown = (
+    panel: "leftRail" | "inspector" | "timeline",
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ): void => {
     const step = event.shiftKey ? 40 : 12;
     if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
       event.preventDefault();
@@ -70,7 +85,16 @@ export function AppShell({ toolbar, rail, preview, inspector, timeline }: AppShe
       <div className="shell__body">
         {visibility.leftRail ? (
           <>
-            <div style={{ width: sizes.leftRail, minWidth: sizes.leftRail, minHeight: 0, background: "var(--surface-1)" }}>{rail}</div>
+            <div
+              style={{
+                width: sizes.leftRail,
+                minWidth: sizes.leftRail,
+                minHeight: 0,
+                background: "var(--surface-1)",
+              }}
+            >
+              {rail}
+            </div>
             <div
               className="splitter splitter--vertical"
               role="separator"
@@ -123,7 +147,10 @@ export function AppShell({ toolbar, rail, preview, inspector, timeline }: AppShe
               onPointerDown={(event) => beginDrag("inspector", event)}
               onKeyDown={(event) => onSplitterKeyDown("inspector", event)}
             />
-            <div className="shell__inspector" style={{ width: sizes.inspector, minWidth: sizes.inspector }}>
+            <div
+              className="shell__inspector"
+              style={{ width: sizes.inspector, minWidth: sizes.inspector }}
+            >
               {inspector}
             </div>
           </>
@@ -132,7 +159,14 @@ export function AppShell({ toolbar, rail, preview, inspector, timeline }: AppShe
 
       {/* Panel visibility is also exposed as a compact strip so a hidden panel is always
           recoverable without a mouse (PRD §14 keyboard navigation). */}
-      <div className="row small muted" style={{ padding: "2px 10px", borderTop: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
+      <div
+        className="row small muted"
+        style={{
+          padding: "2px 10px",
+          borderTop: "1px solid var(--border-subtle)",
+          background: "var(--surface-1)",
+        }}
+      >
         <span>Panels:</span>
         {(
           [
@@ -142,7 +176,13 @@ export function AppShell({ toolbar, rail, preview, inspector, timeline }: AppShe
             ["storyboard", "storyboard"],
           ] as const
         ).map(([panel, label]) => (
-          <button key={panel} type="button" className="chip" aria-pressed={visibility[panel]} onClick={() => togglePanel(panel)}>
+          <button
+            key={panel}
+            type="button"
+            className="chip"
+            aria-pressed={visibility[panel]}
+            onClick={() => togglePanel(panel)}
+          >
             {visibility[panel] ? "◉" : "◌"} {label}
           </button>
         ))}

@@ -31,7 +31,9 @@ export function LeftRail() {
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
     // Local copy: `RAIL_PANELS` is a readonly tuple, and the index arithmetic below is
     // clearer with a plain array.
-    const panels: ReadonlyArray<{ id: RailPanelId; label: string; hint: string }> = [...RAIL_PANELS];
+    const panels: ReadonlyArray<{ id: RailPanelId; label: string; hint: string }> = [
+      ...RAIL_PANELS,
+    ];
     const index = panels.findIndex((panel) => panel.id === activePanel);
     if (index === -1) return;
     let nextIndex = index;
@@ -51,7 +53,13 @@ export function LeftRail() {
 
   return (
     <div className="rail">
-      <nav className="rail__nav" role="tablist" aria-orientation="vertical" aria-label="Editor panels" onKeyDown={onKeyDown}>
+      <nav
+        className="rail__nav"
+        role="tablist"
+        aria-orientation="vertical"
+        aria-label="Editor panels"
+        onKeyDown={onKeyDown}
+      >
         {RAIL_PANELS.map((panel) => (
           <button
             key={panel.id}
