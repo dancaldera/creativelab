@@ -2,22 +2,23 @@
  * `TimelineRuler` — timecode ticks plus playhead scrubbing.
  *
  * Rendered as a `role="slider"` so screen readers get position information, and as a
- * pointer-driven scrub surface so it feels like an NLE. Tick density adapts to zoom: the
- * label interval is the smallest "nice" step whose pixel width clears ~90 px.
+ * pointer-driven scrub surface so it feels like an NLE.
+ *
+ * Tick density comes from `timelineScale`, the same pure function the lane grid uses, so the
+ * ruler and the grid cannot disagree about where a second boundary is.
  */
 import { useMemo, type PointerEvent as ReactPointerEvent } from "react";
-import { formatTimecode, frameRateAsNumber } from "../state/coreOps";
+import { formatTimecode } from "../state/coreOps";
+import { timelineScale, type FrameRateLike } from "./timelineScale";
 
 export interface TimelineRulerProps {
-  fps: { num: number; den: number };
+  fps: FrameRateLike;
   zoom: number;
   width: number;
   playheadFrame: number;
   durationFrames: number;
   onScrub: (frame: number) => void;
 }
-
-const SECOND_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
 
 export function TimelineRuler({
   fps,
@@ -27,27 +28,14 @@ export function TimelineRuler({
   durationFrames,
   onScrub,
 }: TimelineRulerProps) {
-  const fpsValue = Math.max(1, frameRateAsNumber(fps));
-
-  const { majorStepSeconds, minorStepFrames } = useMemo(() => {
-    const targetPx = 96;
-    const step =
-      SECOND_STEPS.find((candidate) => candidate * fpsValue * zoom >= targetPx) ??
-      SECOND_STEPS[SECOND_STEPS.length - 1]!;
-    return {
-      majorStepSeconds: step,
-      minorStepFrames: Math.max(1, Math.round((step * fpsValue) / 5)),
-    };
-  }, [fpsValue, zoom]);
+  const scale = useMemo(() => timelineScale(fps, zoom), [fps, zoom]);
 
   const ticks = useMemo(() => {
     const items: Array<{ frame: number; major: boolean; label: string | null }> = [];
-    const majorFrames = majorStepSeconds * fpsValue;
-    // Minor ticks exist only when they will not turn the ruler into a solid block.
-    const minorPx = minorStepFrames * zoom;
-    if (minorPx >= 6) {
-      for (let frame = 0; frame <= durationFrames + majorFrames; frame += minorStepFrames) {
-        const isMajor = frame % majorFrames === 0;
+    const { majorStepFrames, minorStepFrames, minorTicksVisible } = scale;
+    if (minorTicksVisible) {
+      for (let frame = 0; frame <= durationFrames + majorStepFrames; frame += minorStepFrames) {
+        const isMajor = frame % majorStepFrames === 0;
         items.push({
           frame,
           major: isMajor,
@@ -55,12 +43,12 @@ export function TimelineRuler({
         });
       }
     } else {
-      for (let frame = 0; frame <= durationFrames + majorFrames; frame += majorFrames) {
+      for (let frame = 0; frame <= durationFrames + majorStepFrames; frame += majorStepFrames) {
         items.push({ frame, major: true, label: formatTimecode(frame, fps, false) });
       }
     }
     return items;
-  }, [durationFrames, fps, majorStepSeconds, minorStepFrames, zoom]);
+  }, [durationFrames, fps, scale]);
 
   const frameForClientX = (clientX: number, element: HTMLElement): number => {
     const rect = element.getBoundingClientRect();
@@ -89,7 +77,7 @@ export function TimelineRuler({
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
-    const step = event.shiftKey ? Math.round(fpsValue) : 1;
+    const step = event.shiftKey ? Math.round(scale.fps) : 1;
     if (event.key === "ArrowRight") {
       event.preventDefault();
       onScrub(Math.min(durationFrames, playheadFrame + step));

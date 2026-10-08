@@ -943,6 +943,51 @@ clip-effect/keyframe gap is a fidelity issue rather than a security one.`,
     ],
   },
   {
+    key: "GAP-RULER-TICK-WINDOW",
+    title: "Render only the visible ruler ticks instead of the whole timeline",
+    parent: "PERF-RESILIENCE",
+    milestone: "Phase 3 — Polished MVP",
+    labels: ["P1", "ui", "quality"],
+    blockedBy: [],
+    source: SECTION.performance,
+    body: `\`TimelineRuler.tsx\` builds its tick list by iterating from frame 0 to
+\`durationFrames + majorStepFrames\`, so the number of DOM nodes depends on the **length of the
+project** rather than on the size of the viewport. At high zoom the step is a handful of frames
+and almost every tick is off-screen.
+
+Measured at 30 fps with a ~1100 px viewport (the tick count is the loop's actual iteration
+count, the visible count is derived from the same step):
+
+| Project | Zoom | Frames per tick | Ticks rendered | Ticks visible | Ratio |
+| --- | --- | --- | --- | --- | --- |
+| 5 min | 40 px/f | 6 | 1,506 | ~7 | 215x |
+| 10 min | 40 px/f | 6 | 3,006 | ~7 | 429x |
+| 30 min | 40 px/f | 6 | 9,006 | ~7 | 1,287x |
+| 2 h | 40 px/f | 6 | 36,006 | ~7 | 5,144x |
+
+Each tick renders a wrapper element plus a tick element (and a label span for majors), so a
+30-minute project at maximum zoom creates roughly 18,000 DOM nodes to draw about seven lines.
+That is a scrub-latency and memory problem rather than a cosmetic one, and it grows linearly
+with project length — the opposite of an adaptive ruler.
+
+**The fix** is to iterate only the visible window: pass the scroll offset and viewport width
+from \`Timeline.tsx\` (it already holds the lanes' \`scrollLeft\` and \`clientWidth\` for the
+playhead and marquee logic), derive \`[firstFrame, lastFrame]\` with a one-step margin, and start
+the loop at the first tick at or after \`firstFrame\`. The step arithmetic stays in
+\`timelineScale.ts\`, which already has tests; the change is to the loop bounds and the props.
+
+Worth covering with a test that the ticks actually drawn always include every fully visible
+ruler step — clamping the window too tightly is the obvious way to get this wrong, and the
+symptom (a missing label at the left edge while scrolling) is easy to miss by eye.`,
+    criteria: [
+      "The tick list is bounded by the viewport, not by the project length",
+      "A 2-hour project at maximum zoom renders on the order of tens of ticks, not tens of thousands",
+      "Every ruler step fully inside the viewport still has a tick and a label",
+      "Scrolling keeps the visible window covered, with no gap or flicker at the edges",
+      "A test asserts the drawn window covers the visible range for a range of scroll offsets",
+    ],
+  },
+  {
     key: "GAP-GOLDEN-BASELINES",
     title: "Decide how golden-frame reference images are stored",
     parent: "GOLDEN-FRAMES",

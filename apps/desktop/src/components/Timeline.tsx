@@ -19,6 +19,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -29,6 +30,7 @@ import { useEditorStore } from "../state/editorStore";
 import { useThumbnail, useWaveform } from "../hooks/queries";
 import { ClipView } from "./ClipView";
 import { TimelineRuler } from "./TimelineRuler";
+import { GRID_STEP_VAR, timelineScale } from "./timelineScale";
 import { TrackHeader } from "./TrackHeader";
 
 const LANE_HEIGHT = 62;
@@ -111,6 +113,9 @@ export function Timeline() {
     Math.round(frameRateAsNumber(fps) * 12),
   );
   const contentWidth = Math.max(320, Math.ceil(contentFrames * zoom));
+  // One source of truth for tick and grid spacing; the ruler derives the same value from the
+  // same function, so a zoom change cannot move one without the other.
+  const gridScale = useMemo(() => timelineScale(fps, zoom), [fps, zoom]);
   const lanesHeight = Math.max(1, orderedTracks.length * LANE_HEIGHT);
 
   const onLanesScroll = useCallback(() => {
@@ -522,7 +527,23 @@ export function Timeline() {
           onDragOver={onLaneDragOver}
           onDrop={onLaneDrop}
         >
-          <div className="timeline__content" style={{ width: contentWidth }}>
+          {/*
+            The lane grid is drawn on this element rather than on `.timeline__lanes`: the
+            lanes element is the scroll container, and a background on a scroll container does
+            not move with its content, so the grid would stay put while clips scrolled past it.
+            This element is exactly `contentWidth` wide, so the gradient also starts at frame 0.
+          */}
+          <div
+            className="timeline__content"
+            // `as CSSProperties` is required only for the custom property: csstype has no index
+            // signature for `--*` keys, so a computed key is otherwise rejected.
+            style={
+              {
+                width: contentWidth,
+                [GRID_STEP_VAR]: `${gridScale.gridStepPx}px`,
+              } as CSSProperties
+            }
+          >
             <TimelineRuler
               fps={fps}
               zoom={zoom}

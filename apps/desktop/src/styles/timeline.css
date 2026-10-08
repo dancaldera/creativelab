@@ -51,18 +51,26 @@
 .timeline__lanes {
   position: relative;
   overflow: auto;
-  background: repeating-linear-gradient(
-    to right,
-    transparent 0,
-    transparent calc(var(--second-width, 120px) - 1px),
-    var(--border-subtle) calc(var(--second-width, 120px) - 1px),
-    var(--border-subtle) var(--second-width, 120px)
-  );
+  /* No background here on purpose: this element is the scroll container, and a background on
+     a scroll container does not move with its content — the grid would sit still while clips
+     scrolled underneath it. The grid lives on `.timeline__content` below. */
 }
 
 .timeline__content {
   position: relative;
   min-width: 100%;
+  /* Vertical guides aligned to the ruler ticks. `--grid-step` is set from the shared
+     `timelineScale` computation, so it is always exactly one ruler step wide.
+     The fallback is deliberately enormous: if the variable is ever unset or renamed, drawing
+     no grid is correct, whereas falling back to a fixed pixel value is exactly the bug this
+     replaced (a hardcoded 120px interval that ignored the zoom). */
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(var(--grid-step, 9999px) - 1px),
+    var(--border-subtle) calc(var(--grid-step, 9999px) - 1px),
+    var(--border-subtle) var(--grid-step, 9999px)
+  );
   /* The gesture surface is absolutely positioned over the lanes; the content box must be
      tall enough for it, so it grows with the lane stack instead of collapsing. */
   min-height: 100%;
