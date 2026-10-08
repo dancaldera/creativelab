@@ -1,0 +1,21 @@
+{
+  "name": "@creativelab/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Headless driver: create a project, generate assets, edit the timeline, export MP4.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "creativelab": "./bin/creativelab.mjs"
+  },
+  "scripts": {
+    "start": "node bin/creativelab.mjs",
+    "e2e": "node bin/creativelab.mjs e2e",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@creativelab/core": "workspace:*",
+    "@creativelab/media": "workspace:*",
+    "@creativelab/providers": "workspace:*"
+  }
+}

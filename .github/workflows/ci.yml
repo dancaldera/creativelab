@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep pnpm and node behaviour identical between local runs and CI.
+  PNPM_VERSION: "12.8.1"
+  NODE_VERSION: "22"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # TypeScript workspace: domain core, media pipeline, providers, webview UI.
+  # ---------------------------------------------------------------------------
+  node:
+    name: Typecheck, lint, test and build (Node ${{ github.event_name == 'pull_request' && 'PR' || 'main' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # The media package generates real fixtures and exercises the renderer, so the
+      # suite must be able to run FFmpeg rather than skip it.
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Format check
+        run: pnpm run format:check
+
+      - name: Unit and integration tests
+        run: pnpm run test
+
+      - name: Build packages and webview bundle
+        run: pnpm run build
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Rust host: allowlisted IPC, keychain, rusqlite store, FFmpeg orchestration.
+  # ---------------------------------------------------------------------------
+  rust:
+    name: Rust host (cargo fmt, check, test)
+    runs-on: macos-14
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: apps/desktop/src-tauri
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Check
+        run: cargo check --all-targets --locked
+
+      - name: Test
+        run: cargo test --locked
+
+  # ---------------------------------------------------------------------------
+  # End-to-end: idea -> generated asset -> timeline edit -> real MP4 on disk.
+  # This is the only job that proves the whole pipeline works together.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: Headless end-to-end export
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [node]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm -r --filter './packages/**' run build
+
+      - name: Create project, generate assets, edit timeline, export MP4
+        run: pnpm run e2e
+
+      - name: Upload the exported video and project
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            .tmp/e2e/**
+          if-no-files-found: warn
+          retention-days: 7

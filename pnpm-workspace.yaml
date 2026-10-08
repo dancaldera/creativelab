@@ -1,0 +1,10 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+  - "tools/*"
+
+# pnpm 10+ blocks lifecycle scripts by default. These two need theirs:
+#   esbuild         — downloads/builds the platform binary that Vite and Vitest use
+#   @tauri-apps/cli — installs the platform-specific Tauri CLI binary
+allowBuilds:
+  esbuild: true

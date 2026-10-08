@@ -1,0 +1,27 @@
+{
+  "name": "@creativelab/providers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Capability-based AI provider adapters, model catalog and cost estimation.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@creativelab/core": "workspace:*",
+    "zod": "^4.1.13"
+  }
+}

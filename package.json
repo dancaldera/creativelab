@@ -1,0 +1,40 @@
+{
+  "name": "creativelab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-First AI Creative Studio \u2014 desktop video, image, audio and voice generation with a professional non-destructive editor and entirely local project ownership.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "packageManager": "pnpm@12.8.1",
+  "scripts": {
+    "build": "pnpm -r --filter './packages/**' run build && pnpm --filter @creativelab/desktop run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tauri": "pnpm --filter @creativelab/desktop run tauri",
+    "cli": "node tools/cli/bin/creativelab.mjs",
+    "e2e": "node tools/cli/bin/creativelab.mjs e2e",
+    "verify": "pnpm run typecheck && pnpm run lint && pnpm run test",
+    "clean": "rm -rf packages/*/dist apps/*/dist apps/*/src-tauri/target",
+    "backlog:plan": "node tools/github/create-backlog.mjs --dry-run",
+    "backlog:apply": "node tools/github/create-backlog.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^9.39.2",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.50.1",
+    "vitest": "^4.0.18"
+  }
+}

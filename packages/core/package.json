@@ -1,0 +1,33 @@
+{
+  "name": "@creativelab/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Domain core: timebase, project model, timeline algebra, migrations, job queue, budgets.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
+    "./migrations/*": "./migrations/*"
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.1.13"
+  }
+}

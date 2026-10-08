@@ -1,0 +1,64 @@
+[package]
+name = "creativelab-desktop"
+version = "0.1.0"
+description = "Creative Studio desktop shell (Tauri 2) — allowlisted IPC over a local-first editor store"
+authors = ["Creative Lab"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77"
+default-run = "creativelab-desktop"
+
+[lib]
+name = "creativelab_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "creativelab-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+
+# SQLite. `bundled` compiles the amalgamation so the app never depends on the host's
+# system libsqlite3 (which is what guarantees the TypeScript `node:sqlite` store and
+# this store speak the exact same dialect).
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# OS keychain. PRD §13: API keys live in the platform credential store, referenced by
+# an opaque handle; `apple-native` selects the macOS Security.framework backend.
+keyring = { version = "3", features = ["apple-native"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+sha2 = "0.10"
+hex = "0.4"
+uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "process", "macros", "io-util", "time", "sync"] }
+time = { version = "0.3", features = ["formatting", "parsing", "macros"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+regex = "1"
+tempfile = "3"
+walkdir = "2"
+
+[features]
+# `tauri build` uses this to stamp custom-protocol assets; kept for CLI compatibility.
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.dev]
+# Keep incremental artifacts small: the disk has ~12 GB free and the `bundled` SQLite
+# amalgamation plus Tauri's dependency tree is the bulk of the build.
+debug = 1
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

@@ -1,0 +1,450 @@
+/* ==========================================================================
+   timeline.css — ruler, track headers, clips, playhead, selection marquee
+   ========================================================================== */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--surface-0);
+}
+
+.timeline__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  flex-wrap: wrap;
+}
+
+.timeline__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--track-header-width) minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.timeline__headers {
+  border-right: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline__headers-spacer {
+  height: var(--ruler-height);
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+}
+
+.timeline__headers-scroll {
+  overflow: hidden;
+  flex: 1 1 auto;
+}
+
+.timeline__lanes {
+  position: relative;
+  overflow: auto;
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(var(--second-width, 120px) - 1px),
+      var(--border-subtle) calc(var(--second-width, 120px) - 1px),
+      var(--border-subtle) var(--second-width, 120px)
+    );
+}
+
+.timeline__content {
+  position: relative;
+  min-width: 100%;
+  /* The gesture surface is absolutely positioned over the lanes; the content box must be
+     tall enough for it, so it grows with the lane stack instead of collapsing. */
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Pointer target for marquee selection and drag capture. It sits *behind* the clips so a
+   clip's own pointerdown fires first and bubbles up here. */
+.timeline__gesture {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--ruler-height);
+  z-index: 0;
+  touch-action: none;
+}
+
+.timeline__tracks {
+  position: relative;
+  z-index: 1;
+}
+
+.timeline__empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Ruler
+   -------------------------------------------------------------------------- */
+
+.ruler {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: var(--ruler-height);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.ruler__tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+}
+
+.ruler__tick--minor {
+  top: 60%;
+  background: var(--border-subtle);
+}
+
+.ruler__label {
+  position: absolute;
+  top: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  transform: translateX(4px);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Track lane + header
+   -------------------------------------------------------------------------- */
+
+.track-lane {
+  position: relative;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.track-lane--locked {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.02) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.track-lane--drop-target {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.track-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  height: 100%;
+}
+
+.track-header--selected {
+  background: var(--accent-soft);
+}
+
+.track-header__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.track-header__name:hover {
+  border-color: var(--border-subtle);
+}
+
+.track-header__kind {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.track-header__toggles {
+  display: flex;
+  gap: 2px;
+}
+
+.toggle {
+  min-width: 22px;
+  padding: 2px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.toggle[aria-pressed="true"] {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.toggle--danger[aria-pressed="true"] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.track-header__volume {
+  width: 58px;
+}
+
+.track-header__order {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.track-header__order button {
+  padding: 0 4px;
+  line-height: 1;
+  font-size: 9px;
+}
+
+/* --------------------------------------------------------------------------
+   Clips
+   -------------------------------------------------------------------------- */
+
+.clip {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: var(--clip-video);
+  overflow: hidden;
+  cursor: grab;
+  color: #fff;
+  user-select: none;
+  touch-action: none;
+}
+
+.clip--audio {
+  background: var(--clip-audio);
+}
+
+.clip--caption {
+  background: var(--clip-caption);
+}
+
+.clip--selected {
+  border-color: var(--clip-selected);
+  box-shadow: 0 0 0 1px var(--clip-selected);
+}
+
+.clip--dragging {
+  opacity: 0.75;
+  cursor: grabbing;
+  z-index: 3;
+}
+
+.clip--missing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 128, 128, 0.32) 0 5px,
+    transparent 5px 10px
+  );
+  pointer-events: none;
+}
+
+.clip__label {
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  right: 6px;
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.clip__thumbs {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.clip__thumb {
+  height: 100%;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-right: 1px solid rgba(0, 0, 0, 0.35);
+}
+
+.clip__waveform {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.clip__fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+.clip__fade--out {
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+}
+
+.clip__badges {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  display: flex;
+  gap: 3px;
+  font-size: 9px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.clip__badge {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 3px;
+  padding: 0 3px;
+  color: #fff;
+}
+
+/* Drag handles: wide enough to hit, invisible until hovered. */
+.clip__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 3;
+  background: transparent;
+}
+
+.clip__handle:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.clip__handle--start {
+  left: 0;
+}
+
+.clip__handle--end {
+  right: 0;
+}
+
+.clip__split {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 9px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 4;
+  padding: 0;
+}
+
+.clip:hover .clip__split,
+.clip__split:focus-visible {
+  display: inline-flex;
+}
+
+/* --------------------------------------------------------------------------
+   Playhead + marquee
+   -------------------------------------------------------------------------- */
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--playhead);
+  pointer-events: none;
+  z-index: 6;
+  will-change: transform;
+}
+
+.playhead__head {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 11px;
+  height: 9px;
+  background: var(--playhead);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.marquee {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.snap-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--accent);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 5;
+}

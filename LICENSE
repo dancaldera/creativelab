@@ -1,0 +1,42 @@
+MIT License
+
+Copyright (c) 2026 Daniel Caldera Rosas
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Third-party components and licensing notes
+
+This project orchestrates external tools and services. Distribution of a packaged
+build requires a fresh licensing review (PRD §19, open decision 2):
+
+- **FFmpeg / ffprobe** — invoked as a separate process. FFmpeg is LGPL-2.1-or-later by
+  default, but an LGPL build must be used and the licence text shipped; an
+  `--enable-gpl` build (e.g. with libx264) is GPL-2.0-or-later and is what H.264
+  encoding requires. Confirm the intended distribution model before bundling a binary.
+- **x264** — GPL-2.0-or-later. Required for the H.264 output the MVP specifies.
+- **Remotion** — named in the PRD as the intended composition engine for deterministic
+  effects and titles. Remotion has its own commercial licensing terms that must be
+  reviewed before distribution. The current export path uses FFmpeg filter graphs and
+  does not depend on Remotion.
+- **Tauri, React, Zustand, TanStack Query, zod** — MIT / Apache-2.0.
+
+No provider API keys, model weights, or generated media are distributed with this
+repository.

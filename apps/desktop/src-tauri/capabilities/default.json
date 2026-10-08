@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimum capability set for the Creative Studio main window: core window/event basics, the native dialog panels, and user-initiated open/reveal. SECURITY (PRD §13, ARCHITECTURE 'Desktop IPC allowlist'): nothing broader is granted on purpose. No `fs:*` — every file read/write happens Rust-side behind an allowlisted command and is validated by `WorkspaceScope`, so granting the webview filesystem permissions would defeat workspace-scoped access. No `shell:*` — ffmpeg/ffprobe are spawned from Rust with an argument array; there is no shell and no renderer-controlled argv. No `http:*` — provider HTTP happens in Rust so a secret never enters the webview (PRD §9). No `process:*`/`updater:*`/`global-shortcut:*` — no allowlisted command needs them. Every command re-validates its arguments and routes every path through `WorkspaceScope::scope`, so a capability mistake is not the only line of defence.",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:default", "opener:default"]
+}

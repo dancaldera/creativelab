@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "allowJs": true,
+    "checkJs": false,
+    "verbatimModuleSyntax": false,
+    "moduleResolution": "bundler",
+    "paths": {
+      "@creativelab/core": ["../../packages/core/src/index.ts"],
+      "@creativelab/media": ["../../packages/media/src/index.ts"],
+      "@creativelab/providers": ["../../packages/providers/src/index.ts"]
+    }
+  },
+  "include": ["lib/**/*.mjs", "bin/**/*.mjs", "test/**/*.ts"],
+  "exclude": ["node_modules"]
+}
