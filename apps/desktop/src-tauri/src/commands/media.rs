@@ -218,9 +218,11 @@ mod tests {
 
     #[test]
     fn cache_paths_stay_inside_the_cache_directories() {
-        let root = std::env::temp_dir().join(format!("creativelab-media-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
-        crate::db::ensure_workspace_layout(&root).unwrap();
+        let base = std::env::temp_dir().join(format!("creativelab-media-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        crate::db::ensure_workspace_layout(&base).unwrap();
+        // Canonicalize so the containment check compares real paths on macOS.
+        let root = std::fs::canonicalize(&base).unwrap();
         let scope = WorkspaceScope::new(&root);
         for relative in [
             format!("cache/thumbnails/{}", cache_name("../../x", "1s-320.png")),
@@ -230,7 +232,7 @@ mod tests {
             let resolved = scope.resolve(&relative).unwrap();
             assert!(resolved.starts_with(root.join("cache")), "{resolved:?}");
         }
-        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

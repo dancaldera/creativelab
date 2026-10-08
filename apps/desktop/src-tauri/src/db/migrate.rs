@@ -73,7 +73,10 @@ pub fn migration_checksum(sql: &str) -> String {
     // `(?m)` makes `$` match before each `\n`; `[ \t]+` is the same class core uses.
     // `regex` has no `\z`-only anchor issue here: every line, including the last, is
     // covered because `(?m)$` also matches at end-of-text.
-    let trailing = Regex::new(r"[ \t]+$").expect("static regex");
+    // `(?m)` is required: without it `$` matches only at the very end of the haystack, so a
+    // line's trailing spaces before a `\n` would survive and the checksum would not match
+    // JavaScript's `/^[ \t]+$/gm` pass in `packages/core/src/migrations.ts`.
+    let trailing = Regex::new(r"(?m)[ \t]+$").expect("static regex");
     let stripped = trailing.replace_all(&lf_normalized, "");
     let normalized = stripped.trim();
     let mut hasher = Sha256::new();
@@ -259,6 +262,8 @@ mod tests {
     /// the checksum, otherwise a Windows checkout would look like a schema change.
     #[test]
     fn crlf_and_trailing_whitespace_normalize_to_the_same_checksum() {
+        // Written with explicit `\r` escapes: a literal carriage return in the source file
+        // would be normalized away by the lexer and the test would prove nothing.
         let clean = "CREATE TABLE a (id TEXT);\nCREATE TABLE b (id TEXT);\n";
         assert_eq!(
             migration_checksum(clean),
@@ -275,6 +280,11 @@ mod tests {
             migration_checksum(
                 "  \r\n  CREATE TABLE a (id TEXT);\t\r\nCREATE TABLE b (id TEXT);\r\n\r\n"
             )
+        );
+        // The canonical migration file itself is CRLF-insensitive.
+        assert_eq!(
+            migration_checksum(INIT_SQL),
+            migration_checksum(&INIT_SQL.replace('\n', "\r\n"))
         );
         // Real changes still change the checksum.
         assert_ne!(

@@ -331,7 +331,7 @@ impl WorkspaceScope {
                 candidate,
             )
         })?;
-        Ok(PathBuf::from(normalize_components(&path.to_string_lossy())))
+        Ok(normalize_absolute(path))
     }
 
     /// Resolve an absolute directory the user picked in the native dialog.
@@ -360,6 +360,26 @@ impl WorkspaceScope {
             )),
         }
     }
+}
+
+/// Fold `.` and repeated separators out of an absolute path, keeping the root.
+///
+/// [`normalize_components`] joins with `/` and would drop a leading `/`, turning an absolute
+/// path into a relative one; this keeps `RootDir`/`Prefix` so an already-validated absolute
+/// path stays absolute.
+fn normalize_absolute(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(_) | Component::RootDir => out.push(component.as_os_str()),
+            Component::Normal(part) => out.push(part),
+            Component::CurDir => {}
+            // Already rejected by `validate_file_name` on the final component and by the
+            // absolute-path requirement above; kept so nothing is silently swallowed.
+            Component::ParentDir => out.push(".."),
+        }
+    }
+    out
 }
 
 /// `true` when `target` is `root` itself or lives beneath it. Component-wise on the
@@ -657,7 +677,9 @@ mod tests {
     /// Parse the frozen protocol file and prove the Rust allowlist has not drifted.
     #[test]
     fn allowlist_matches_protocol_ts() {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/bridge/protocol.ts");
+        // CARGO_MANIFEST_DIR is `apps/desktop/src-tauri`; the bridge lives in
+        // `apps/desktop/src/bridge`.
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/bridge/protocol.ts");
         let text = match fs::read_to_string(&path) {
             Ok(text) => text,
             Err(error) => panic!("could not read {}: {error}", path.display()),

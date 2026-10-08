@@ -528,12 +528,15 @@ pub fn build_render_arguments(
     }
 
     // Walk `encode_args` as `flag value` pairs, substituting the values that come from the
-    // resolved preset. `graph.ts` fixes the order, so the argv is deterministic.
+    // resolved preset. `graph.ts` fixes the order, so the argv is deterministic — and a
+    // substituted pair must consume *both* tokens, or the original value would be replayed
+    // as if it were a flag.
     let base = &graph.encode_args;
     let mut index = 0;
     while index < base.len() {
         let flag = base[index].clone();
         let value = base.get(index + 1).cloned();
+        let mut consumed = 1;
         match flag.as_str() {
             // CRF mode is quality-bound, so the slower preset buys nothing but time.
             "-preset" => {
@@ -546,19 +549,22 @@ pub fn build_render_arguments(
                     }
                     .to_string(),
                 );
+                consumed = 2;
             }
             "-pix_fmt" => {
                 args.push(flag);
                 args.push(preset.pixel_format.clone());
+                consumed = 2;
             }
             "-b:a" => {
                 args.push(flag);
                 args.push(format!("{}k", preset.audio_bitrate_kbps));
+                consumed = 2;
             }
             "-c:v" => {
                 args.push(flag);
                 args.push(value.unwrap_or_else(|| "libx264".to_string()));
-                index += 1;
+                consumed = 2;
                 // Rate control belongs with the video encoder. Exactly one of bitrate/CRF
                 // is emitted, matching `if (preset.crf === null)` in `graph.ts`.
                 if let Some(crf) = preset.crf {
@@ -573,11 +579,11 @@ pub fn build_render_arguments(
                 args.push(flag);
                 if let Some(value) = value {
                     args.push(value);
-                    index += 1;
+                    consumed = 2;
                 }
             }
         }
-        index += 1;
+        index += consumed;
     }
 
     // Progress lines on stdout, parseable one `key=value` per line.

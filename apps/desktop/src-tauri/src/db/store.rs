@@ -98,8 +98,9 @@ pub fn project_ref(connection: &Connection) -> CommandResult<ProjectRef> {
 // ---------------------------------------------------------------------------
 
 fn map_asset(row: &Row<'_>) -> CommandResult<AssetDto> {
-    let fps_num = int_opt(row, 14)?;
-    let fps_den = int_opt(row, 15)?;
+    // Indices follow `ASSET_COLUMNS` exactly; it is the single place the order is declared.
+    let fps_num = int_opt(row, 13)?;
+    let fps_den = int_opt(row, 14)?;
     Ok(AssetDto {
         id: text(row, 0)?,
         project_id: text(row, 1)?,
@@ -118,16 +119,16 @@ fn map_asset(row: &Row<'_>) -> CommandResult<AssetDto> {
             (Some(num), Some(den)) => Some(FrameRateDto::new(num, den)),
             _ => None,
         },
-        codec: text_opt(row, 16)?,
-        container: text_opt(row, 17)?,
-        origin: text(row, 18)?,
-        parent_asset_id: text_opt(row, 19)?,
-        generation_job_id: text_opt(row, 20)?,
-        prompt_revision_id: text_opt(row, 21)?,
-        probe: Some(json_value(text_opt(row, 22)?, serde_json::Value::Null)),
-        missing_at: text_opt(row, 23)?,
-        created_at: text(row, 24)?,
-        updated_at: text(row, 25)?,
+        codec: text_opt(row, 15)?,
+        container: text_opt(row, 16)?,
+        origin: text(row, 17)?,
+        parent_asset_id: text_opt(row, 18)?,
+        generation_job_id: text_opt(row, 19)?,
+        prompt_revision_id: text_opt(row, 20)?,
+        probe: Some(json_value(text_opt(row, 21)?, serde_json::Value::Null)),
+        missing_at: text_opt(row, 22)?,
+        created_at: text(row, 23)?,
+        updated_at: text(row, 24)?,
     })
 }
 

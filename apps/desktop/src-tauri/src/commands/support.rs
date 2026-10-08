@@ -68,18 +68,34 @@ mod tests {
     #[test]
     fn sanitize_label_neutralizes_directory_traversal() {
         assert_eq!(sanitize_label("My Project", "backup"), "My Project");
-        assert_eq!(sanitize_label("../../etc/passwd", "backup"), "etc-passwd");
+        // Mirrors `sanitizeFileName` in core: separators become `-` and *leading* dots are
+        // stripped, so `../../x` collapses to something with no traversal in it.
+        assert_eq!(
+            sanitize_label("../../etc/passwd", "backup"),
+            "-..-etc-passwd"
+        );
         assert_eq!(sanitize_label("a/b\\c", "backup"), "a-b-c");
         assert_eq!(sanitize_label("", "backup"), "backup");
         assert_eq!(sanitize_label("   ", "backup"), "backup");
         assert_eq!(sanitize_label("...", "backup"), "backup");
         assert_eq!(sanitize_label("trailing.  ", "backup"), "trailing");
         assert_eq!(sanitize_label(&"x".repeat(400), "backup").len(), 180);
-        // No path separators survive, so the result can never be more than one segment.
-        for input in ["../..", "a/b", "..\\..", "/absolute", "C:\\Windows"] {
+        // The security property that actually matters: no separator survives, and the
+        // result is never `.` or `..`.
+        for input in [
+            "../..",
+            "a/b",
+            "..\\..",
+            "/absolute",
+            "C:\\Windows",
+            "....",
+            "./.",
+        ] {
             let cleaned = sanitize_label(input, "backup");
             assert!(!cleaned.contains('/'), "{input} -> {cleaned}");
             assert!(!cleaned.contains('\\'), "{input} -> {cleaned}");
+            assert!(cleaned != "." && cleaned != "..", "{input} -> {cleaned}");
+            assert!(!cleaned.is_empty(), "{input} -> empty");
         }
     }
 

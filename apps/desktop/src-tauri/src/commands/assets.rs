@@ -407,10 +407,12 @@ mod tests {
 
     #[test]
     fn asset_path_prefers_the_workspace_relative_path() {
-        let root =
+        let base =
             std::env::temp_dir().join(format!("creativelab-assetpath-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&root);
-        db::ensure_workspace_layout(&root).unwrap();
+        let _ = std::fs::remove_dir_all(&base);
+        db::ensure_workspace_layout(&base).unwrap();
+        // Canonicalize so the comparison sees /private/var rather than /var on macOS.
+        let root = std::fs::canonicalize(&base).unwrap();
         std::fs::write(root.join("assets/originals/a.mp4"), b"x").unwrap();
         let scope = WorkspaceScope::new(&root);
 
@@ -444,7 +446,7 @@ mod tests {
         asset.uri = String::new();
         assert!(asset_path(&scope, &asset).is_err());
 
-        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

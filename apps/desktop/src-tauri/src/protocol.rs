@@ -862,8 +862,9 @@ mod tests {
             has_secret: true,
         })
         .unwrap();
-        let keys: Vec<&String> = value.as_object().unwrap().keys().collect();
-        assert_eq!(keys, vec!["providerId", "credentialRef", "hasSecret"]);
+        let mut keys: Vec<&String> = value.as_object().unwrap().keys().collect();
+        keys.sort();
+        assert_eq!(keys, vec!["credentialRef", "hasSecret", "providerId"]);
         let text = value.to_string();
         assert!(!text.contains("secret\""), "{text}");
     }

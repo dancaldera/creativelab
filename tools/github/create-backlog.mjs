@@ -618,6 +618,18 @@ function gh(args, options = {}) {
   }).trim();
 }
 
+/**
+ * Is this failure GitHub telling us the relationship already exists?
+ *
+ * `execFileSync` puts the child's stdout/stderr on the error object, **not** in
+ * `error.message` — so matching on the message alone silently fails to detect a duplicate,
+ * which is what made a second run of this script report every dependency as an error.
+ */
+function isAlreadyLinked(error) {
+  const text = `${error?.message ?? ""}\n${error?.stdout ?? ""}\n${error?.stderr ?? ""}`;
+  return text.includes("422") || /already been taken|already exists/i.test(text);
+}
+
 function ghJson(args) {
   const output = execFileSync("gh", args, {
     encoding: "utf8",
@@ -846,7 +858,14 @@ function main() {
   process.stdout.write(`→ sub-issue hierarchy\n`);
   for (const issue of issues) {
     if (!issue.key.startsWith("FR-")) continue;
-    const epicKey = (issue.epic ?? "").split("/")[0];
+    // `issue.epic` is a bare letter, or two letters for a requirement that spans epics
+    // (e.g. FR-02 is "B/D" — persistence *and* media). A GitHub sub-issue has exactly one
+    // parent, so the first letter is filed as the primary epic; the blocked-by edges carry
+    // the secondary relationship. The issue map is keyed by the full "EPIC-A" identifier,
+    // and getting that wrong silently skipped every link.
+    const epicLetter = (issue.epic ?? "").split("/")[0];
+    if (epicLetter.length === 0) continue;
+    const epicKey = `EPIC-${epicLetter}`;
     const parent = created.get(epicKey);
     const child = created.get(issue.key);
     if (!parent || !child) continue;
@@ -861,6 +880,10 @@ function main() {
       ]);
       process.stdout.write(`  #${parent.number} ⊃ #${child.number}\n`);
     } catch (error) {
+      if (isAlreadyLinked(error)) {
+        process.stdout.write(`  = #${parent.number} ⊃ #${child.number} (exists)\n`);
+        continue;
+      }
       process.stdout.write(`  ! ${issue.key}: ${String(error.message).split("\n")[0]}\n`);
     }
   }
@@ -889,13 +912,15 @@ function main() {
         process.stdout.write(`  #${blocked.number} blocked by #${dependency.number}\n`);
         edges += 1;
       } catch (error) {
-        const message = String(error.message).split("\n")[0];
-        // A duplicate dependency returns 422; that is fine for an idempotent re-run.
-        if (message.includes("422")) {
+        // A duplicate dependency returns 422 with "Target issue has already been taken";
+        // that is the expected outcome of an idempotent re-run, not a failure.
+        if (isAlreadyLinked(error)) {
           edges += 1;
           continue;
         }
-        process.stdout.write(`  ! ${issue.key} <- ${dependencyKey}: ${message}\n`);
+        process.stdout.write(
+          `  ! ${issue.key} <- ${dependencyKey}: ${String(error.message).split("\n")[0]}\n`,
+        );
       }
     }
   }

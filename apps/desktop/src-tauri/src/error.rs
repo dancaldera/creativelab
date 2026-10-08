@@ -211,26 +211,67 @@ pub fn sanitize(message: &str) -> String {
     for token in message.split_inclusive(char::is_whitespace) {
         let core = token.trim_end();
         let tail = &token[core.len()..];
-        let lower = core.to_ascii_lowercase();
-        let looks_secret = lower.starts_with("sk-")
-            || lower.starts_with("sk_")
-            || lower.starts_with("bearer")
-            || lower.starts_with("api_key=")
-            || lower.starts_with("api-key:")
-            || lower.starts_with("apikey=")
-            || lower.starts_with("authorization:")
-            || lower.starts_with("x-api-key:");
-        if looks_secret {
-            // Keep the scheme name so the message still reads sensibly.
-            let label = core.split([':', '=']).next().unwrap_or("token");
-            out.push_str(label);
-            out.push_str("[redacted]");
-        } else {
-            out.push_str(core);
+        match redact_token(core) {
+            Some(redacted) => out.push_str(&redacted),
+            None => out.push_str(core),
         }
         out.push_str(tail);
     }
     out
+}
+
+/// Shapes that mean "the rest of this token is secret".
+const SECRET_MARKERS: &[&str] = &[
+    "sk-",
+    "sk_",
+    "bearer",
+    "api_key",
+    "api-key",
+    "apikey",
+    "x-api-key",
+    "authorization",
+    "token=",
+    "token:",
+    "secret=",
+    "secret:",
+    "password=",
+    "password:",
+];
+
+/// Redact one whitespace-delimited token, or `None` when it carries no secret marker.
+///
+/// The label is kept (`Authorization` -> `Authorization[redacted]`, `api_key=…` ->
+/// `api_key[redacted]`) so the message still reads; the value never survives.
+fn redact_token(token: &str) -> Option<String> {
+    if token.is_empty() {
+        return None;
+    }
+    let lower = token.to_ascii_lowercase();
+    if !SECRET_MARKERS.iter().any(|marker| lower.contains(marker)) {
+        return None;
+    }
+    // `Scheme: value` / `key=value`: keep the label, drop everything after the separator.
+    if let Some(index) = token.find([':', '=']) {
+        let label: String = token[..index]
+            .chars()
+            .filter(|character| {
+                character.is_alphanumeric() || *character == '-' || *character == '_'
+            })
+            .collect();
+        if !label.is_empty() {
+            return Some(format!("{label}[redacted]"));
+        }
+    }
+    // A bare scheme word (e.g. `Bearer`) reads better with its name kept.
+    if token.len() <= 16
+        && token
+            .chars()
+            .all(|character| character.is_ascii_alphabetic())
+    {
+        return Some(format!("{token}[redacted]"));
+    }
+    // Otherwise the marker *is* part of the secret (`sk-live-abc123`): drop it entirely.
+    Some("[redacted]".to_string())
 }
 
 #[cfg(test)]
@@ -246,8 +287,16 @@ mod tests {
         assert_eq!(value["message"], "nope");
         assert_eq!(value["retryable"], false);
         assert_eq!(value["details"]["field"], "title");
-        let keys: Vec<&String> = value.as_object().unwrap().keys().collect();
-        assert_eq!(keys, vec!["category", "message", "retryable", "details"]);
+        // `serde_json::Map` is a `BTreeMap`, so the serialized key order is alphabetical;
+        // assert on the set of keys, not on declaration order.
+        let mut keys: Vec<&String> = value.as_object().unwrap().keys().collect();
+        keys.sort();
+        assert_eq!(keys, vec!["category", "details", "message", "retryable"]);
+        assert_eq!(
+            value.as_object().unwrap().len(),
+            4,
+            "exactly four wire fields"
+        );
     }
 
     #[test]

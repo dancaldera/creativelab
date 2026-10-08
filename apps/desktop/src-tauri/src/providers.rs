@@ -506,7 +506,12 @@ mod tests {
         let models = normalize_models(provider, &body);
         assert_eq!(models.len(), 1);
         assert_eq!(models[0].model_id, "eleven_multilingual_v2");
+        // `name` wins for the human-readable label; the id stays the callable identifier.
+        assert_eq!(models[0].display_name, "Multilingual v2");
         assert_eq!(models[0].modality, "tts");
+        // With only `model_id` available, the id doubles as the label.
+        let bare = normalize_models(provider, &serde_json::json!([{ "model_id": "eleven_v3" }]));
+        assert_eq!(bare[0].display_name, "eleven_v3");
     }
 
     #[test]
